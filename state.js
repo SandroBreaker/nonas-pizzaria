@@ -1,33 +1,25 @@
 // state.js
-// --- 1. CONSTANTS ---
 export const PIZZA_SIZES = { M: 'M', G: 'G', F: 'F' };
 export const CATEGORIES = { PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES' };
-export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE' };
+export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE', FAQ: 'FAQ', CONTACT: 'CONTACT' };
 
 export const API_INVICTUS_TOKEN = "wsxiP0Dydmf2TWqjOn1iZk9CfqwxdZBg8w5eQVaTLDWHnTjyvuGAqPBkAiGU";
 export const API_INVICTUS_ENDPOINT = "https://api.invictuspay.app.br/api";
 export const OFFER_HASH_DEFAULT = "png8aj6v6p"; 
 export const CART_STORAGE_KEY = 'nona-pizzeria-cart-v1';
+export const USER_STORAGE_KEY = 'nona-pizzeria-user-v1';
 
 export const MENU_ITEMS = [
-  // LÓGICA DE PREÇO: O valor aqui é o valor REAL DE VENDA (Promocional).
-  // Calabresa
   { id: 1, name: "Calabresa", description: "Mussarela, calabresa fatiada, cebola e azeitonas.", category: CATEGORIES.PIZZA, basePrice: 24.95, priceModifiers: { M: 24.95, G: 34.90, F: 42.90 }, imageUrl: "assets/pizza-calabresa.jpg" },
-  // Marguerita
   { id: 2, name: "Marguerita", description: "Mussarela, rodelas de tomate, manjericão fresco e parmesão ralado.", category: CATEGORIES.PIZZA, basePrice: 27.50, priceModifiers: { M: 27.50, G: 38.50, F: 46.50 }, imageUrl: "assets/pizza-marguerita.jpg" },
-  // Portuguesa
   { id: 3, name: "Portuguesa", description: "Mussarela, presunto, ovos, cebola, azeitonas e ervilha.", category: CATEGORIES.PIZZA, basePrice: 26.00, priceModifiers: { M: 26.00, G: 36.40, F: 44.00 }, imageUrl: "assets/pizza-portuguesa.jpg" },
-  // 4 Queijos
   { id: 4, name: "Quatro Queijos", description: "Mussarela, provolone, gorgonzola e catupiry.", category: CATEGORIES.PIZZA, basePrice: 29.95, priceModifiers: { M: 29.95, G: 41.90, F: 50.90 }, imageUrl: "assets/pizza-queijos.jpg" },
-  // Bebidas
   { id: 5, name: "Coca-Cola Lata", description: "Refrigerante clássico (350ml).", category: CATEGORIES.DRINK, basePrice: 3.50, imageUrl: "assets/coca-lata.jpg" },
   { id: 6, name: "Guaraná Antarctica 2L", description: "Refrigerante de Guaraná (2 litros).", category: CATEGORIES.DRINK, basePrice: 7.00, imageUrl: "assets/guarana-2l.jpg" },
-  // Sobremesas
   { id: 7, name: "Brownie de Chocolate", description: "Brownie quente com nozes e cobertura de chocolate.", category: CATEGORIES.DESSERT, basePrice: 8.50, imageUrl: "assets/brownie.jpg" },
   { id: 8, name: "Petit Gateau", description: "Bolo de chocolate com recheio cremoso e sorvete de baunilha.", category: CATEGORIES.DESSERT, basePrice: 10.90, imageUrl: "assets/petit-gateau.jpg" },
 ];
 
-// --- 2. APP STATE ---
 let renderAppRef = () => console.error("renderApp not initialized");
 let triggerToastRef = () => console.warn("Toast not initialized");
 
@@ -39,7 +31,8 @@ export function initRenderAppRef(renderFn, toastFn) {
 export const appState = {
   currentView: APP_VIEWS.MENU,
   selectedCategory: CATEGORIES.PIZZA,
-  customerData: null,
+  customerData: null, 
+  lastOrder: null, 
 };
 
 export function navigate(view) {
@@ -57,7 +50,27 @@ export function setCustomerData(data) {
     appState.customerData = data;
 }
 
-// --- 3. CART STORE ---
+export function confirmOrder(total) {
+    appState.lastOrder = {
+        customer: { ...appState.customerData },
+        items: [...CartStore.items],
+        total: total,
+        date: new Date(),
+        status: 'RECEIVED' 
+    };
+    CartStore.clearCart();
+}
+
+export function saveUserProfile(data) {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data));
+    triggerToastRef("Perfil salvo com sucesso!");
+}
+
+export function getUserProfile() {
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+}
+
 export const CartStore = {
   items: [],
   isCartOpen: false,
@@ -83,7 +96,6 @@ export const CartStore = {
 
   addItem(product, size) {
     const isPizza = product.category === CATEGORIES.PIZZA;
-    // Pega o preço já promocional do array MENU_ITEMS
     const finalPrice = isPizza && size && product.priceModifiers ? product.priceModifiers[size] || product.basePrice : product.basePrice;
 
     const existingItemIndex = this.items.findIndex(item => item.product.id === product.id && item.size === size);

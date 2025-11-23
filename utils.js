@@ -1,12 +1,6 @@
 // utils.js
 import { API_INVICTUS_ENDPOINT, API_INVICTUS_TOKEN } from './state.js';
 
-// --- 1. HELPERS VISUAIS (FONT AWESOME & FORMATTERS) ---
-
-/**
- * Retorna tag <i> do Font Awesome.
- * Mapeia nomes lógicos do App para classes visuais.
- */
 export function getIcon(iconName, className = '') {
   const iconMap = {
     'ShoppingCart': 'fa-cart-shopping',
@@ -30,11 +24,17 @@ export function getIcon(iconName, className = '') {
     'CheckCircle2': 'fa-circle-check',
     'Check': 'fa-check',
     'Copy': 'fa-copy',
-    'Home': 'fa-house'
+    'Home': 'fa-house',
+    'Motorcycle': 'fa-motorcycle',
+    'Clock': 'fa-clock',
+    'TriangleAlert': 'fa-triangle-exclamation',
+    'Question': 'fa-circle-question',
+    'Phone': 'fa-phone',
+    'Save': 'fa-floppy-disk',
+    'Edit': 'fa-pen-to-square'
   };
 
-  const faClass = iconMap[iconName] || 'fa-circle-question'; // Fallback seguro
-  // Adiciona fa-spin se for o loader
+  const faClass = iconMap[iconName] || 'fa-circle-question'; 
   const extraClass = iconName === 'LoaderCircle' ? 'fa-spin' : '';
 
   return `<i class="fa-solid ${faClass} ${extraClass} ${className}"></i>`;
@@ -51,19 +51,16 @@ export function formatDate(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
   const now = new Date();
-  // Diferença em dias
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays <= 7) {
-    if (diffDays === 0 || diffDays === 1) return "hoje"; // Ajuste para UX
+    if (diffDays === 0 || diffDays === 1) return "hoje"; 
     if (diffDays === 2) return "ontem";
     return `há ${diffDays} dias`;
   }
   return new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
 }
-
-// --- 2. VALIDATORS & MASKS ---
 
 export function maskPhone(value) {
   if (!value) return '';
@@ -92,9 +89,6 @@ export function isValidCPF(cpf) {
   cpf = cpf.replace(/[^\d]+/g, ''); 
   if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false; 
   
-  // Validação simples de formato é suficiente para UX, 
-  // validação estrita deve ser feita no backend se necessário.
-  // Mantendo sua lógica original:
   let sum = 0, remainder;
   for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i - 1, i)) * (11 - i);
   remainder = (sum * 10) % 11;
@@ -128,7 +122,7 @@ export async function fetchAddressByZipCode(zipCode) {
             neighborhood: data.bairro,
             city: data.localidade,
             state: data.uf,
-            complement: data.complemento // Adicionado complemento
+            complement: data.complemento 
         };
     } catch (error) {
         console.error("Erro CEP:", error);
@@ -136,7 +130,6 @@ export async function fetchAddressByZipCode(zipCode) {
     }
 }
 
-// --- 3. INVICTUS API ---
 export async function executeInvictusApi(payload) {
     const path = '/public/v1/transactions';
     try {
@@ -147,17 +140,13 @@ export async function executeInvictusApi(payload) {
         });
         const data = await response.json();
 
-        // Verificação robusta de sucesso
         if (response.ok) {
-            // Sucesso se for PIX ou se tiver QR Code gerado
             if (data.payment_method === 'pix' || (data.pix && data.pix.pix_qr_code)) {
                 return { success: true, data: data };
             }
-             // Fallback: às vezes a API retorna sucesso mas a estrutura varia levemente
             return { success: true, data: data };
         }
         
-        // Tratamento de erro detalhado
         const errorMsg = data.errors 
             ? Object.values(data.errors).flat().join('; ') 
             : (data.message || "Erro desconhecido na API.");
