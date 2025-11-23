@@ -19,11 +19,7 @@ export function renderApp(onlyCartUpdate = false) {
   renderCartDrawer();
 
   // Se for apenas uma atualização do carrinho, não precisamos redesenhar o conteúdo principal
-  if (onlyCartUpdate) {
-    // Re-adicionando a chamada centralizada que garante que os ícones no Drawer sejam processados.
-    lucide.createIcons(); 
-    return;
-  }
+  if (onlyCartUpdate) return;
   
   // 3. Remove o conteúdo anterior (main)
   let mainContent = root.querySelector('main');
@@ -53,469 +49,313 @@ export function renderApp(onlyCartUpdate = false) {
   } else {
     root.appendChild(newContent);
   }
-  
-  // 5. ATUALIZADO: Processa TODOS os ícones APÓS TODOS os elementos estarem no DOM.
-  lucide.createIcons(); 
 }
 
 // --- II. COMPONENTS LOGIC ---
 
-// --- 1. ProductCard ---
+// --- 1. Product Card ---
 export function renderProductCard(product) {
-  const isPizza = product.category === State.CATEGORIES.PIZZA;
-  let selectedSize = isPizza ? State.PIZZA_SIZES.G : undefined;
-  
   const card = document.createElement('div');
-  card.className = "bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover-shadow-md transition-shadow duration-300";
+  card.className = 'bg-white rounded-xl shadow-lg overflow-hidden transition-all hover-shadow-xl hover-scale-105 zoom-in duration-300';
+  
+  const isPizza = product.category === State.CATEGORIES.PIZZA;
+  const priceDisplay = isPizza 
+    ? Utils.formatCurrency(product.priceModifiers[State.PIZZA_SIZES.M]) + ' (M)' 
+    : Utils.formatCurrency(product.basePrice);
 
-  const renderPriceAndActions = (currentPrice, size) => {
-    return `
-        <div class="flex items-center justify-between pt-2 border-t border-stone-100">
-            <span class="font-bold text-lg text-dark">
-                ${Utils.formatCurrency(currentPrice)}
-            </span>
-            <button 
-                data-product-id="${product.id}" 
-                data-size="${size || ''}"
-                class="add-to-cart-btn bg-primary hover-bg-red-700 text-white p-2 rounded-full shadow-sm hover-shadow-md transition-all active-scale-95"
-                aria-label="Adicionar ao Carrinho"
-            >
-                ${Utils.getIconSVG('Plus', 'icon-20')}
-            </button>
-        </div>
-    `;
-  };
-
-  const getPizzaSizeButtons = () => {
-    return `
-      <div class="flex bg-stone-100 rounded-lg p-1">
-        ${Object.values(State.PIZZA_SIZES).map(size => {
-          const label = size === 'M' ? 'Média' : size === 'G' ? 'Grande' : 'Família';
-          const isActive = size === selectedSize;
-          return `
-            <button
-              data-size="${size}"
-              data-product-id="${product.id}"
-              class="size-button flex-1 text-xs font-medium py-1\.5 rounded-md transition-all ${
-                isActive 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-stone-500 hover-text-stone-700'
-              }"
-            >
-              ${label}
-            </button>
-          `;
-        }).join('')}
+  let sizeOptionsHTML = '';
+  if (isPizza) {
+    sizeOptionsHTML = `
+      <div class="flex items-center mt-3 mb-4 gap-2 text-sm font-medium">
+        <span class="text-stone-500">Tamanho:</span>
+        <select id="size-select-${product.id}" class="select-base text-sm py-1 pl-2 pr-8 border border-stone-300 rounded-md bg-stone-50 cursor-pointer">
+          <option value="${State.PIZZA_SIZES.M}" data-price="${product.priceModifiers[State.PIZZA_SIZES.M]}">M - ${Utils.formatCurrency(product.priceModifiers[State.PIZZA_SIZES.M])}</option>
+          <option value="${State.PIZZA_SIZES.G}" data-price="${product.priceModifiers[State.PIZZA_SIZES.G]}">G - ${Utils.formatCurrency(product.priceModifiers[State.PIZZA_SIZES.G])}</option>
+          <option value="${State.PIZZA_SIZES.F}" data-price="${product.priceModifiers[State.PIZZA_SIZES.F]}">Família - ${Utils.formatCurrency(product.priceModifiers[State.PIZZA_SIZES.F])}</option>
+        </select>
       </div>
     `;
   }
-
-  const initialPrice = product.priceModifiers ? product.priceModifiers[selectedSize] : product.basePrice;
-
+  
   card.innerHTML = `
-      <div class="relative h-48 overflow-hidden group">
-          <img 
-            src="${product.imageUrl}" 
-            alt="${product.name}" 
-            class="w-full h-full object-cover transition-transform duration-500 group-hover-scale-110"
-            loading="lazy"
-          />
-          <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.5), transparent); opacity: 0.6;"></div>
-          <div class="absolute bottom-3 left-3 text-white">
-              <span class="text-xs font-bold bg-secondary px-2 py-0\.5 rounded-full uppercase tracking-wider">
-                  ${product.category}
-              </span>
-          </div>
-      </div>
+    <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-48 object-cover">
+    <div class="p-4 flex flex-col flex-grow">
+      <h3 class="text-xl font-bold mb-2">${product.name}</h3>
+      <p class="text-sm text-stone-600 mb-3 flex-grow">${product.description}</p>
       
-      <div class="p-4 flex-1 flex flex-col">
-          <h3 class="font-serif text-lg font-bold text-dark mb-1">${product.name}</h3>
-          <p class="text-stone-500 text-sm mb-4 flex-1 line-clamp-3">
-              ${product.description}
-          </p>
+      ${sizeOptionsHTML}
 
-          <div class="mt-auto space-y-3 product-actions">
-              ${isPizza ? getPizzaSizeButtons() : ''}
-              <div class="price-and-actions">
-                ${renderPriceAndActions(initialPrice, selectedSize)}
-              </div>
-          </div>
+      <div class="flex items-center justify-between mt-auto pt-2">
+        <span id="price-display-${product.id}" class="text-2xl font-bold text-dark">${priceDisplay}</span>
+        <button 
+          id="add-to-cart-btn-${product.id}"
+          class="btn btn-primary text-sm py-2 px-4 rounded-full flex items-center gap-1 leading-none"
+          data-product-id="${product.id}"
+        >
+          ${Utils.getIconSVG('plus', 'icon-18')}
+          Adicionar
+        </button>
       </div>
+    </div>
   `;
-
-  const priceAndActionsContainer = card.querySelector('.price-and-actions');
-
-  const updatePriceAndListeners = (size) => {
-        const currentPrice = product.priceModifiers ? product.priceModifiers[size] : product.basePrice;
-        priceAndActionsContainer.innerHTML = renderPriceAndActions(currentPrice, size);
-        
-        const newAddToCartBtn = card.querySelector('.add-to-cart-btn');
-        if (newAddToCartBtn) {
-            newAddToCartBtn.addEventListener('click', () => State.CartStore.addItem(product, size));
-        }
-  };
-
+  
+  const addButton = card.querySelector(`#add-to-cart-btn-${product.id}`);
+  const priceDisplayEl = card.querySelector(`#price-display-${product.id}`);
+  
+  addButton.addEventListener('click', () => {
+    let size = null;
+    if (isPizza) {
+      const select = card.querySelector(`#size-select-${product.id}`);
+      size = select.value;
+    }
+    State.CartStore.addItem(product, size);
+  });
+  
   if (isPizza) {
-    const sizeButtons = card.querySelectorAll('.size-button');
-    sizeButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        const newSize = e.target.dataset.size;
-        selectedSize = newSize;
-
-        sizeButtons.forEach(b => {
-          b.classList.remove('bg-white', 'text-primary', 'shadow-sm');
-          b.classList.add('text-stone-500', 'hover-text-stone-700');
-        });
-        e.target.classList.add('bg-white', 'text-primary', 'shadow-sm');
-        e.target.classList.remove('text-stone-500', 'hover-text-stone-700');
-
-        updatePriceAndListeners(newSize);
-      });
+    const select = card.querySelector(`#size-select-${product.id}`);
+    select.addEventListener('change', (e) => {
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      const newPrice = selectedOption.getAttribute('data-price');
+      priceDisplayEl.textContent = Utils.formatCurrency(parseFloat(newPrice));
     });
   }
 
-  updatePriceAndListeners(selectedSize);
-
   return card;
 }
-
 
 // --- 2. Header ---
 export function renderHeader() {
   const root = document.getElementById('root');
   let header = root.querySelector('header');
-
+  
   if (!header) {
     header = document.createElement('header');
-    header.className = "sticky-top-0 z-40 w-full bg-white backdrop-blur-sm border-b border-stone-100 shadow-sm transition-all duration-300";
-    root.prepend(header);
+    header.className = 'sticky top-0 z-40 bg-white shadow-md border-b border-stone-100 animate-in fade-in duration-300';
+    root.prepend(header); 
   }
 
-  const itemsCount = State.CartStore.itemsCount;
-  const isMenu = State.appState.currentView === State.APP_VIEWS.MENU;
-  const currentCategory = State.appState.selectedCategory; 
-
-  header.innerHTML = `
-    <div class="container h-16 flex items-center justify-between">
-      <button 
-        id="nav-to-menu-logo"
-        class="flex items-center gap-2 group"
-      >
-        <div class="bg-primary p-1\.5 rounded-lg text-white transition-transform group-hover-rotate-12">
-          ${Utils.getIconSVG('UtensilsCrossed', 'icon-24')}
-        </div>
-        <span class="font-serif text-xl font-bold tracking-tight text-dark">
-          Nona's <span class="text-primary">Pizzeria</span>
-        </span>
-      </button>
-
-      <nav class="flex items-center gap-4">
-        ${!isMenu ? `
-          <button 
-            id="nav-to-menu-btn"
-            class="text-stone-600 hover-text-primary font-medium text-sm md-hidden"
-          >
-            Voltar ao Menu
-          </button>
-        ` : ''}
-        
-        <button 
-          id="open-cart-btn"
-          class="relative p-2 text-stone-600 hover-text-primary transition-colors"
-          aria-label="Abrir Carrinho"
-        >
-          ${Utils.getIconSVG('ShoppingCart', 'icon-24')}
-          ${itemsCount > 0 ? `
-            <span class="cart-count shadow-sm animate-in zoom-in">
-              ${itemsCount}
-            </span>
-          ` : ''}
-        </button>
-      </nav>
-    </div>
-
-    ${isMenu ? `
-        <div class="w-full bg-white border-b border-stone-100 shadow-sm">
-            <div class="container flex justify-start items-center gap-3 overflow-x-auto whitespace-nowrap py-2">
-                ${Object.values(State.CATEGORIES).map(category => {
-                    const isActive = category === currentCategory;
-                    const label = category === State.CATEGORIES.REVIEW ? 'Avaliações' : category.charAt(0) + category.slice(1).toLowerCase();
-                    return `
-                        <button 
-                            data-category="${category}"
-                            class="category-nav-btn px-4 py-1\.5 rounded-full text-sm font-semibold transition-colors flex-shrink-0 ${
-                                isActive 
-                                    ? 'bg-primary text-white shadow-md' 
-                                    : 'bg-stone-100 text-stone-600 hover-bg-stone-200'
-                            }"
-                        >
-                            ${label}
-                        </button>
-                    `;
-                }).join('')}
-            </div>
-        </div>
-    ` : ''}
-  `;
-
-  // Adiciona listeners
-  header.querySelector('#nav-to-menu-logo').addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
-  const navBtn = header.querySelector('#nav-to-menu-btn');
-  if(navBtn) navBtn.addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
+  const { totalItems } = State.CartStore.getCartSummary();
   
-  header.querySelector('#open-cart-btn').addEventListener('click', () => {
-    State.CartStore.isCartOpen = true;
-    State.CartStore.updateUI();
+  header.innerHTML = `
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div id="logo" class="flex items-center cursor-pointer">
+        <img src="pizza-icon-32x32.png" alt="Nona's Pizzeria Logo" class="h-8 w-8 mr-2"/>
+        <h1 class="font-serif text-2xl font-bold text-dark">Nona's Pizzeria</h1>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <div id="category-selector" class="flex items-center bg-stone-100 rounded-full p-1 text-sm font-medium">
+          ${Object.values(State.CATEGORIES).map(category => `
+            <button 
+              class="category-btn px-4 py-2 rounded-full transition-all ${State.appState.selectedCategory === category ? 'bg-primary text-white shadow-md' : 'text-stone-600 hover-text-primary'}"
+              data-category="${category}"
+            >
+              ${category}
+            </button>
+          `).join('')}
+        </div>
+
+        <button 
+          id="toggle-cart-btn" 
+          class="btn btn-outline btn-icon-square relative"
+          aria-label="Abrir carrinho de compras"
+        >
+          ${Utils.getIconSVG('shopping-cart', 'icon-20')}
+          ${totalItems > 0 ? `<span class="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-secondary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">${totalItems}</span>` : ''}
+        </button>
+      </div>
+    </div>
+  `;
+  
+  header.querySelector('#logo').addEventListener('click', () => {
+    State.setView(State.APP_VIEWS.MENU);
   });
 
-  if (isMenu) {
-      header.querySelectorAll('.category-nav-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-              const category = e.currentTarget.dataset.category;
-              State.setSelectedCategory(category);
-          });
-      });
-  }
-
-  // lucide.createIcons(); 
+  header.querySelector('#toggle-cart-btn').addEventListener('click', () => {
+    State.toggleCart();
+  });
+  
+  header.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const category = e.currentTarget.getAttribute('data-category');
+      State.setSelectedCategory(category);
+    });
+  });
 }
 
-// --- 3. CartDrawer ---
-function closeCart() {
-  State.CartStore.isCartOpen = false;
-  State.CartStore.updateUI();
-}
-
+// --- 3. Cart Drawer ---
 export function renderCartDrawer() {
   const root = document.getElementById('root');
   let drawer = root.querySelector('#cart-drawer');
-
-  if (!State.CartStore.isCartOpen) {
-    if (drawer) drawer.remove();
-    return;
-  }
-
+  const { items, finalTotal, totalItems } = State.CartStore.getCartSummary();
+  const isCartOpen = State.appState.isCartOpen;
+  
   if (!drawer) {
     drawer = document.createElement('div');
     drawer.id = 'cart-drawer';
-    drawer.className = 'fixed inset-0 z-50 flex justify-end';
-    root.append(drawer);
+    root.appendChild(drawer);
   }
-
-  const items = State.CartStore.items;
-  const cartTotal = State.CartStore.cartTotal;
-  const itemsCount = State.CartStore.itemsCount;
-
-  const getCartItemsHTML = () => {
-    if (items.length === 0) {
-      return `
-        <div class="h-full flex flex-col items-center justify-center text-stone-400 space-y-4">
-          ${Utils.getIconSVG('ShoppingBag', 'icon-48 opacity-20')}
-          <p class="text-center">Seu carrinho está vazio.</p>
-          <button 
-            id="close-cart-empty-btn"
-            class="text-primary font-medium hover-underline"
-          >
-            Ver Cardápio
-          </button>
-        </div>
-      `;
-    }
-
-    return items.map((item) => {
-      const sizeLabel = item.size ? 
-        (item.size === 'M' ? 'Médio' : item.size === 'G' ? 'Grande' : 'Família') : '';
-
-      return `
-        <div class="flex gap-4 p-3 border border-stone-100 rounded-xl bg-stone-50">
-          <img 
-            src="${item.product.imageUrl}" 
-            alt="${item.product.name}" 
-            class="w-16 h-16 object-cover rounded-md"
-          />
-          <div class="flex-1">
-            <div class="flex justify-between items-start">
-              <div>
-                <h4 class="font-medium text-dark line-clamp-1">${item.product.name}</h4>
-                ${item.size ? `
-                  <span class="text-xs text-stone-500 font-medium bg-white border border-stone-200 px-1\.5 py-0\.5 rounded">
-                    Tamanho: ${sizeLabel}
-                  </span>
-                ` : ''}
-              </div>
-              <button 
-                data-cart-id="${item.cartId}"
-                class="remove-item-btn text-stone-300 hover-text-red-500 transition-colors p-1"
-                aria-label="Remover item"
-              >
-                ${Utils.getIconSVG('Trash2', 'icon-16')}
-              </button>
-            </div>
-            
-            <div class="flex items-center justify-between mt-3">
-              <div class="flex items-center gap-3 bg-white border border-stone-200 rounded-lg px-2 py-1 shadow-sm">
+  
+  drawer.className = `fixed inset-0 z-50 flex justify-end transition-all ${isCartOpen ? 'pointer-events-auto' : 'pointer-events-none'}`;
+  
+  // Overlay
+  const overlay = `<div id="cart-overlay" class="absolute inset-0 bg-dark transition-opacity duration-300 ${isCartOpen ? 'opacity-50' : 'opacity-0'}"></div>`;
+  
+  // Drawer Content
+  const cartItemsHTML = items.length === 0 
+    ? `<div class="p-4 text-center text-stone-500 flex flex-col items-center justify-center flex-grow">
+          ${Utils.getIconSVG('pizza', 'icon-48 mb-3 text-stone-300')}
+          <p class="text-lg font-medium">Seu carrinho está vazio.</p>
+          <p class="text-sm">Que tal começar com uma Calabresa?</p>
+       </div>`
+    : items.map(item => `
+        <div class="flex items-center bg-stone-50 p-3 rounded-lg shadow-sm animate-in slide-in-from-bottom-4 zoom-in duration-300">
+          <div class="flex-grow">
+            <p class="font-medium text-dark">${item.product.name} ${item.size ? `(${item.size})` : ''}</p>
+            <p class="text-sm text-stone-500">${Utils.formatCurrency(item.totalPrice / item.quantity)} x ${item.quantity}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex items-stretch border border-stone-300 rounded-md overflow-hidden">
                 <button 
-                  data-cart-id="${item.cartId}" data-delta="-1"
-                  class="update-quantity-btn text-stone-400 hover-text-dark ${item.quantity <= 1 ? 'opacity-50' : ''}"
+                  class="update-qty-btn p-1 bg-white hover-bg-stone-100 transition-all border-r border-stone-300 disabled:opacity-50" 
+                  data-cart-id="${item.cartId}" 
+                  data-delta="-1"
                   ${item.quantity <= 1 ? 'disabled' : ''}
                 >
-                  ${Utils.getIconSVG('Minus', 'icon-14')}
+                  ${Utils.getIconSVG('minus', 'icon-18 text-dark')}
                 </button>
-                <span class="text-sm font-semibold w-4 text-center">${item.quantity}</span>
+                <span class="px-3 flex items-center text-dark font-medium bg-white">${item.quantity}</span>
                 <button 
-                  data-cart-id="${item.cartId}" data-delta="1"
-                  class="update-quantity-btn text-stone-400 hover-text-dark"
+                  class="update-qty-btn p-1 bg-white hover-bg-stone-100 transition-all border-l border-stone-300" 
+                  data-cart-id="${item.cartId}" 
+                  data-delta="1"
                 >
-                  ${Utils.getIconSVG('Plus', 'icon-14')}
+                  ${Utils.getIconSVG('plus', 'icon-18 text-dark')}
                 </button>
-              </div>
-              <span class="font-bold text-dark">${Utils.formatCurrency(item.totalPrice)}</span>
             </div>
+            <button 
+                class="remove-item-btn p-1 text-red-600 hover-bg-red-50 rounded-full transition-all" 
+                data-cart-id="${item.cartId}" 
+                aria-label="Remover item"
+            >
+              ${Utils.getIconSVG('trash-2', 'icon-18')}
+            </button>
           </div>
         </div>
-      `;
-    }).join('');
-  }
-
-  drawer.innerHTML = `
-    <div 
-      id="cart-backdrop"
-      class="absolute inset-0"
-      style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);"
-    ></div>
-
-    <div class="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-      <div class="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50">
-        <h2 class="font-serif text-xl font-bold text-dark flex items-center gap-2">
-          ${Utils.getIconSVG('ShoppingBag', 'icon-20 text-primary')}
-          Seu Pedido
-        </h2>
-        <button 
-          id="close-cart-btn"
-          class="p-2 text-stone-400 hover-text-dark transition-colors rounded-full"
-          style="background: transparent; border: none; cursor: pointer;"
-        >
-          ${Utils.getIconSVG('X', 'icon-20')}
+      `).join('');
+  
+  const drawerContentHTML = `
+    <div id="cart-content-container" class="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col ${isCartOpen ? 'animate-in slide-in-from-right duration-300' : ''}">
+      
+      <div class="p-4 border-b border-stone-100 flex items-center justify-between sticky top-0 bg-white z-10">
+        <h2 class="font-serif text-2xl font-bold">Seu Pedido (${totalItems})</h2>
+        <button id="close-cart-btn" class="text-stone-500 hover-text-dark transition-all" aria-label="Fechar carrinho">
+          ${Utils.getIconSVG('x', 'icon-24')}
         </button>
       </div>
-
-      <div class="flex-1 overflow-y-auto p-4 space-y-4">
-        ${getCartItemsHTML()}
+      
+      <div class="flex-grow overflow-y-auto p-4 space-y-3">
+        ${cartItemsHTML}
       </div>
-
-      ${items.length > 0 ? `
-        <div class="p-4 bg-white border-t border-stone-100 drawer-footer-shadow">
-          <div class="flex justify-between items-center mb-4 text-lg">
-            <span class="font-medium text-stone-600">Total</span>
-            <span class="font-bold text-2xl text-dark">${Utils.formatCurrency(cartTotal)}</span>
-          </div>
-          <button 
-            id="checkout-btn"
-            class="w-full bg-primary hover-bg-red-700 text-white font-bold py-3\.5 rounded-xl shadow-lg shadow-red-200 transition-all active-scale-98 flex items-center justify-center gap-2"
-          >
-            Finalizar Pedido
-            
-          </button>
+      
+      <div class="p-4 border-t border-stone-100 sticky bottom-0 bg-white shadow-xl">
+        <div class="flex justify-between items-center mb-3 text-lg font-bold">
+          <span>Total:</span>
+          <span class="text-primary">${Utils.formatCurrency(finalTotal)}</span>
         </div>
-      ` : ''}
+        <button 
+          id="checkout-btn" 
+          class="btn btn-primary w-full text-lg ${items.length === 0 ? 'btn-disabled' : ''}"
+          ${items.length === 0 ? 'disabled' : ''}
+        >
+          Finalizar Pedido
+        </button>
+      </div>
     </div>
   `;
-
-  // Adiciona Listeners
-  drawer.querySelector('#cart-backdrop').addEventListener('click', closeCart);
-  drawer.querySelector('#close-cart-btn')?.addEventListener('click', closeCart);
-  drawer.querySelector('#close-cart-empty-btn')?.addEventListener('click', closeCart);
-
-  drawer.querySelectorAll('.remove-item-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const cartId = e.currentTarget.dataset.cartId;
-      State.CartStore.removeItem(cartId);
-    });
-  });
-
-  drawer.querySelectorAll('.update-quantity-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const cartId = e.currentTarget.dataset.cartId;
-      const delta = parseInt(e.currentTarget.dataset.delta);
-      State.CartStore.updateQuantity(cartId, delta);
-    });
-  });
-
-  drawer.querySelector('#checkout-btn')?.addEventListener('click', () => {
-    closeCart();
-    State.navigate(State.APP_VIEWS.CHECKOUT);
-  });
   
-  // lucide.createIcons(); 
+  drawer.innerHTML = isCartOpen ? overlay + drawerContentHTML : '';
+  
+  if (isCartOpen) {
+    // Adiciona Listeners
+    drawer.querySelector('#cart-overlay').addEventListener('click', State.toggleCart);
+    drawer.querySelector('#close-cart-btn').addEventListener('click', State.toggleCart);
+    
+    drawer.querySelectorAll('.remove-item-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const cartId = e.currentTarget.getAttribute('data-cart-id');
+        State.CartStore.removeItem(cartId);
+      });
+    });
+    
+    drawer.querySelectorAll('.update-qty-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const cartId = e.currentTarget.getAttribute('data-cart-id');
+        const delta = parseInt(e.currentTarget.getAttribute('data-delta'));
+        State.CartStore.updateQuantity(cartId, delta);
+      });
+    });
+    
+    const checkoutBtn = drawer.querySelector('#checkout-btn');
+    if (checkoutBtn && !checkoutBtn.disabled) {
+      checkoutBtn.addEventListener('click', () => {
+        State.setView(State.APP_VIEWS.CHECKOUT);
+        State.toggleCart(false);
+      });
+    }
+  }
 }
 
-// --- 4. ReviewsSection ---
-const REVIEWS = [
-  { id: 1, author: "Matheus Freitas", rating: 5, date: "2024-03-20T10:00:00Z", text: "Fui no manhã de sábado (4/5/22) [A data foi ajustada para ser atual]. Tomamos um café da manhã excelente! Tudo muito fresquinho e bem saboroso, aquela cesta de padaria, o pão de queijo é muito bom. Meus pais vieram visitar e pediram para voltarmos, e vamos voltaremos com ctz. ... Mais", commentsCount: 17, photosCount: 2 },
-  { id: 2, author: "José Alberto", rating: 5, date: "2024-03-18T14:30:00Z", text: "Local muito bom na Zona Sul com atendimento com excelência. Recomendo o salmão com risoto de aspargos. Preços bons, mas a qualidade compensa! ... Mais", commentsCount: 4, photosCount: 6 },
-  { id: 3, author: "Boni Marc", rating: 5, date: "2024-03-17T09:15:00Z", text: "Adoro este lugar, frequento desde quando abriu, sempre um salão bem legal pra ir. ... Mais", commentsCount: 7, photosCount: 12 },
-  { id: 4, author: "Elizabeth Monari", rating: 5, date: "2024-03-15T18:00:00Z", text: "BONS PRODUTOS, INGREDIENTES FRESCOS / PREÇO ACESSÍVEL / ATENDIMENTO ÓTIMO. ... Mais", commentsCount: 2, photosCount: 2 },
-  { id: 5, author: "Angela Silva", rating: 4, date: "2024-03-14T11:00:00Z", text: "Maravilhosa tudo muito fresquinho e ótimo preço. ... Mais", commentsCount: 3, photosCount: 1 },
-  { id: 6, author: "Paloma Mascarenhas", rating: 4, date: "2024-03-12T08:45:00Z", text: "Atendimento rápido, um café da manhã. Cardápio com ótimas opções. Preço bom, mas tem que fazer um desejo no pedido em lanchonetes e dando. Previsão de preço, acabei de vir com uma dúvida incrível. Voltarei a frequentar 😊 ... Mais", commentsCount: 21, photosCount: 1 },
-  { id: 7, author: "Lanchonete e Pizzaria Boa Sorte (responsável)", rating: null, date: "2024-03-12T09:00:00Z", text: "Obrigado! 👏👏👏", isOwner: true, },
-];
-
+// --- 4. Review Section (Compartilhada entre views) ---
 export function renderReviewsSection() {
-  const section = document.createElement('section');
-  section.id = 'reviews-section';
-  section.className = 'py-12 space-y-8 bg-white rounded-3xl shadow-xl border border-stone-100';
+    const section = document.createElement('section');
+    section.id = 'reviews-section';
+    section.className = 'bg-stone-100 py-12';
+    
+    const reviews = State.CUSTOMER_REVIEWS;
 
-  section.innerHTML = `
-    <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3 px-4">
-      <span class="w-8 h-1 bg-primary rounded-full"></span>
-      Avaliações dos Clientes
-    </h2>
-    <div class="space-y-6 px-4">
-      ${REVIEWS.map(review => `
-        <div class="border-b border-stone-100 pb-6 last:border-b-0">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-dark font-semibold text-lg flex-shrink-0">
-                ${review.isOwner ? Utils.getIconSVG('Pizza', 'icon-20 text-primary') : review.author.charAt(0)}
+    const reviewCardsHTML = reviews.map(review => {
+        const ratingIcons = Array(review.rating).fill(0).map(() => 
+            Utils.getIconSVG('star', 'icon-16 fill-secondary text-secondary')
+        ).join('');
+
+        return `
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-3 zoom-in duration-500">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <span class="font-bold text-lg mr-1">${review.rating}.0</span>
+                        <div class="flex">
+                            ${ratingIcons}
+                        </div>
+                    </div>
+                    <span class="text-sm text-stone-500">${Utils.formatDate(review.date)}</span>
+                </div>
+                <p class="font-serif text-xl font-semibold text-dark">${review.title}</p>
+                <p class="text-stone-600 italic">"${review.comment}"</p>
+                <div class="pt-2 border-t border-stone-100 mt-auto">
+                    <p class="text-sm font-medium text-dark">${review.customerName}</p>
+                    <p class="text-xs text-stone-500">Cliente Verificado</p>
+                </div>
             </div>
-            <div>
-              <p class="font-semibold text-dark">${review.author} ${review.isOwner ? '<span class="text-sm text-stone-500">(Proprietário)</span>' : ''}</p>
-              <div class="flex items-center text-sm text-stone-500">
-                ${review.rating ? `
-                  ${Array(review.rating).fill().map(() => Utils.getIconSVG('StarFill', 'icon-14 text-yellow-500')).join('')}
-                  ${Array(5 - review.rating).fill().map(() => Utils.getIconSVG('Star', 'icon-14 text-stone-300')).join('')}
-                ` : ''}
-                <span class="ml-2">${Utils.formatDate(review.date)}</span>
-              </div>
+        `;
+    }).join('');
+
+    section.innerHTML = `
+        <div class="container mx-auto px-4 space-y-8">
+            <h2 class="font-serif text-3xl font-bold text-dark text-center">O que nossos clientes dizem</h2>
+            <div class="grid grid-cols-1 md-grid-cols-2 lg-grid-cols-4 gap-6">
+                ${reviewCardsHTML}
             </div>
-          </div>
-          <p class="text-stone-700 mb-3">${review.text}</p>
-          <div class="flex items-center gap-4 text-sm text-stone-500">
-            ${review.commentsCount ? `
-                <span class="flex items-center gap-1">
-                    ${Utils.getIconSVG('MessageSquare', 'icon-16')} ${review.commentsCount}
-                </span>
-            ` : ''}
-            ${review.photosCount ? `
-                <span class="flex items-center gap-1">
-                    ${Utils.getIconSVG('Camera', 'icon-16')} ${review.photosCount}
-                </span>
-            ` : ''}
-            <button class="text-primary hover-underline font-medium ml-auto">Ver Mais</button>
-          </div>
         </div>
-      `).join('')}
-    </div>
-  `;
-  
-  // lucide.createIcons(); 
-  return section;
-}
+    `;
 
+    return section;
+}
 
 // --- 5. Menu ---
 export function renderMenu() {
   const main = document.createElement('main');
-  main.className = 'py-8 space-y-16'; 
+  main.className = 'py-8 space-y-12'; 
 
   const currentCategory = State.appState.selectedCategory;
 
@@ -526,7 +366,7 @@ export function renderMenu() {
   const heroHTML = `
     <div class="bg-dark p-8 md-p-12 relative overflow-hidden text-white shadow-2xl">
         <img 
-            src="assets/hero-pizza.jpg" 
+            src="https://images.unsplash.com/photo-1590947132387-155cc02f3212?q=80&w=1920&auto=format&fit=crop" 
             alt="Pizza Hero" 
             class="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
             style="opacity: 0.4;"
@@ -554,54 +394,52 @@ export function renderMenu() {
   // 2. Menu Content (Contained)
   const menuContent = document.createElement('div');
   menuContent.id = 'menu-sections-container';
-  menuContent.className = 'container mx-auto px-4'; 
-
-  // Lógica para alternar entre Menu de Produtos e Seção de Avaliações
+  menuContent.className = 'container mx-auto px-4 space-y-12'; 
   
-  if (currentCategory === State.CATEGORIES.REVIEW) {
-    // RENDERIZA AVALIAÇÕES como o conteúdo principal
-    menuContent.appendChild(renderReviewsSection());
-  } else {
-    // RENDERIZA CATEGORIA DE PRODUTOS
-    const categoryItems = State.MENU_ITEMS.filter(i => i.category === currentCategory);
-      
-    if (categoryItems.length > 0) {
-      const section = document.createElement('section');
-      section.id = currentCategory.toLowerCase();
-      section.className = 'animate-in fade-in duration-300 scroll-mt-24'; 
-      
-      const title = currentCategory === State.CATEGORIES.PIZZA ? 'Pizzas Especiais' : 
-                    currentCategory === State.CATEGORIES.DRINK ? 'Bebidas' : 'Sobremesas';
-      const indicatorColorClass = currentCategory === State.CATEGORIES.PIZZA ? 'bg-secondary' : 'bg-stone-300';
-      
-      let gridClasses;
-      if (currentCategory === State.CATEGORIES.PIZZA) {
-        gridClasses = 'grid-cols-2 gap-10 product-cards-grid'; 
-      } else {
-        gridClasses = 'grid-cols-1 md-grid-cols-2 lg-grid-cols-4 gap-10 product-cards-grid'; 
-      }
-      
-      section.innerHTML = `
-        <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3">
-          <span class="w-8 h-1 ${indicatorColorClass} rounded-full"></span>
-          ${title}
-        </h2>
-        <div class="${gridClasses}">
-        </div>
-      `;
-      
-      const grid = section.querySelector('.product-cards-grid');
-      categoryItems.forEach(item => {
-        grid.appendChild(renderProductCard(item));
-      });
-      
-      menuContent.appendChild(section);
+  // Renderiza APENAS a seção da categoria selecionada
+  const categoryItems = State.MENU_ITEMS.filter(i => i.category === currentCategory);
+    
+  if (categoryItems.length > 0) {
+    const section = document.createElement('section');
+    section.id = currentCategory.toLowerCase();
+    section.className = 'animate-in fade-in duration-300 scroll-mt-24'; 
+    
+    const title = currentCategory === State.CATEGORIES.PIZZA ? 'Pizzas Especiais' : 
+                  currentCategory === State.CATEGORIES.DRINK ? 'Bebidas' : 'Sobremesas';
+    const indicatorColorClass = currentCategory === State.CATEGORIES.PIZZA ? 'bg-secondary' : 'bg-stone-300';
+    
+    let gridClasses;
+    // ALTERADO: Substituído gap-6 por gap-8 (2rem)
+    if (currentCategory === State.CATEGORIES.PIZZA) {
+      gridClasses = 'grid-cols-2 gap-8 product-cards-grid'; 
+    } else {
+      // ALTERADO: Substituído gap-6 por gap-8 (2rem)
+      gridClasses = 'grid-cols-1 md-grid-cols-2 lg-grid-cols-4 gap-8 product-cards-grid';
     }
+    
+    section.innerHTML = `
+      <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3">
+        <span class="w-8 h-1 ${indicatorColorClass} rounded-full"></span>
+        ${title}
+      </h2>
+      <div class="${gridClasses}">
+      </div>
+    `;
+    
+    const grid = section.querySelector('.product-cards-grid');
+    categoryItems.forEach(item => {
+      grid.appendChild(renderProductCard(item));
+    });
+    
+    menuContent.appendChild(section);
   }
 
   main.appendChild(heroWrapper);
   main.appendChild(menuContent);
   
+  // 3. Adiciona a Seção de Avaliações
+  main.appendChild(renderReviewsSection()); 
+
   heroWrapper.querySelector('#scroll-to-menu-btn').addEventListener('click', () => {
     document.getElementById(State.CATEGORIES.PIZZA.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
     State.setSelectedCategory(State.CATEGORIES.PIZZA);
@@ -610,457 +448,223 @@ export function renderMenu() {
   return main;
 }
 
+// --- 6. Checkout Form ---
+let customerData = State.loadCustomerData();
+let validationErrors = {};
+let isSubmitting = false;
 
-// --- 6. CheckoutForm ---
+function validateForm() {
+    validationErrors = {};
+    const data = customerData;
+    
+    // Simple validation (can be expanded)
+    if (!data.fullName || data.fullName.length < 3) validationErrors.fullName = 'Nome completo é obrigatório.';
+    if (!data.phone || data.phone.length < 14) validationErrors.phone = 'Telefone inválido (mín. 11 dígitos).';
+    if (!data.email || !data.email.includes('@')) validationErrors.email = 'Email inválido.';
+    if (!data.address.street || data.address.street.length < 3) validationErrors.street = 'Rua é obrigatória.';
+    if (!data.address.number) validationErrors.number = 'Número é obrigatório.';
+    if (!data.address.neighborhood || data.address.neighborhood.length < 3) validationErrors.neighborhood = 'Bairro é obrigatório.';
+    if (!data.address.zipCode || data.address.zipCode.length < 9) validationErrors.zipCode = 'CEP inválido.';
+    
+    return Object.keys(validationErrors).length === 0;
+}
+
 export function renderCheckoutForm() {
-  const root = document.getElementById('root');
   const main = document.createElement('main');
-  main.className = 'container mx-auto';
-
-  let formData = {
-    fullName: '', email: '', phone: '', cpf: '',
-    address: { zipCode: '', street: '', number: '', neighborhood: '', complement: '' }
-  };
-  let errors = {};
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    let formattedValue = value;
-
-    if (name === 'cpf') formattedValue = Utils.maskCPF(value);
-    if (name === 'phone') formattedValue = Utils.maskPhone(value);
-    if (name === 'zipCode') formattedValue = Utils.maskZip(value);
-
-    // 1. Atualiza o formData
-    if (name in formData.address) {
-      formData.address[name] = formattedValue;
-    } else {
-      formData[name] = formattedValue;
-    }
-    
-    // Clear error on change
-    if (errors[name]) {
-        errors[name] = '';
-    }
-    
-    // 2. Lógica de Autocompletar CEP
-    if (name === 'zipCode' && formData.address.zipCode.replace(/[^\d]/g, '').length === 8) {
-        clearTimeout(window.zipTimeout);
-        window.zipTimeout = setTimeout(async () => {
-            const address = await Utils.fetchAddressByZipCode(formData.address.zipCode);
-            if (address) {
-                formData.address.street = formData.address.street || address.street;
-                formData.address.neighborhood = formData.address.neighborhood || address.neighborhood;
-                
-                renderFormContent(main);
-                
-                const numberInput = main.querySelector('input[name="number"]');
-                if(numberInput) numberInput.focus();
-            }
-        }, 300);
-    }
-  };
+  main.className = 'py-8 container mx-auto px-4 max-w-lg space-y-8 animate-in fade-in duration-300'; 
   
-  const validateForm = () => {
-    errors = {};
-    if (!formData.fullName.trim()) errors.fullName = "Nome é obrigatório";
-    if (!formData.email.includes('@')) errors.email = "Email inválido";
-    if (!Utils.isValidPhone(formData.phone)) errors.phone = "Telefone inválido";
-    if (!Utils.isValidCPF(formData.cpf)) errors.cpf = "CPF inválido";
-    
-    // Validação de Endereço combinada
-    if (formData.address.street.length < 3) errors.address = "Rua é obrigatória";
-    if (formData.address.zipCode.replace(/[^\d]/g, '').length !== 8) errors.address = "CEP inválido";
-    if (!formData.address.number) errors.address = "Número é obrigatório";
-    if (!formData.address.neighborhood) errors.address = "Bairro é obrigatório";
-
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      State.setCustomerData(formData); 
-      State.navigate(State.APP_VIEWS.SUCCESS);
-    } else {
-      renderFormContent(main);
-    }
-  };
-  
-  const renderFormContent = (container) => {
-    container.innerHTML = `
-      <div class="max-w-2xl mx-auto py-8 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <button 
-          id="back-to-menu-btn"
-          class="flex items-center text-stone-500 hover-text-dark mb-6 transition-colors"
-        >
-          ${Utils.getIconSVG('ChevronLeft', 'icon-20')}
-          Voltar para o Menu
-        </button>
-
-        <div class="bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden">
-          <div class="bg-stone-50 p-6 border-b border-stone-100">
-            <h2 class="text-2xl font-serif font-bold text-dark">Checkout</h2>
-            <p class="text-stone-500">Complete seus dados para finalizar o pedido.</p>
-          </div>
-
-          <form id="checkout-form" class="p-6 space-y-8">
-            <section>
-              <h3 class="flex items-center gap-2 font-bold text-dark mb-4">
-                ${Utils.getIconSVG('User', 'icon-20 text-primary')} Dados Pessoais
-              </h3>
-              <div class="grid grid-cols-1 md-grid-cols-2 gap-4">
-                <div class="md-col-span-2">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Nome Completo</label>
-                  <input
-                    type="text"
-                    required
-                    name="fullName"
-                    value="${formData.fullName}"
-                    placeholder="João Silva"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                  ${errors.fullName ? `<span class="text-xs text-red-500 mt-1">${errors.fullName}</span>` : ''}
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-stone-700 mb-1">CPF</label>
-                  <input
-                    type="text"
-                    required
-                    maxlength="14"
-                    name="cpf"
-                    value="${formData.cpf}"
-                    placeholder="000.000.000-00"
-                    class="w-full px-4 py-2 rounded-lg border ${errors.cpf ? 'input-error' : 'border-stone-200'} focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                  ${errors.cpf ? `<span class="text-xs text-red-500 mt-1">${errors.cpf}</span>` : ''}
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Telefone / WhatsApp</label>
-                  <input
-                    type="tel"
-                    required
-                    maxlength="15"
-                    name="phone"
-                    value="${formData.phone}"
-                    placeholder="(11) 99999-9999"
-                    class="w-full px-4 py-2 rounded-lg border ${errors.phone ? 'input-error' : 'border-stone-200'} focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                  ${errors.phone ? `<span class="text-xs text-red-500 mt-1">${errors.phone}</span>` : ''}
-                </div>
-
-                <div class="md-col-span-2">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    required
-                    name="email"
-                    value="${formData.email}"
-                    placeholder="joao@exemplo.com"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                  ${errors.email ? `<span class="text-xs text-red-500 mt-1">${errors.email}</span>` : ''}
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h3 class="flex items-center gap-2 font-bold text-dark mb-4">
-                ${Utils.getIconSVG('MapPin', 'icon-20 text-primary')} Entrega
-              </h3>
-              <div class="grid grid-cols-1 md-grid-cols-4 gap-4">
-                <div class="md-col-span-1">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">CEP</label>
-                  <input
-                    type="text"
-                    required
-                    maxlength="9"
-                    name="zipCode"
-                    value="${formData.address.zipCode}"
-                    placeholder="00000-000"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                </div>
-                <div class="md-col-span-3">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Rua</label>
-                  <input
-                    type="text"
-                    required
-                    name="street"
-                    value="${formData.address.street}"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                </div>
-                <div class="md-col-span-1">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Número</label>
-                  <input
-                    type="text"
-                    required
-                    name="number"
-                    value="${formData.address.number}"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                </div>
-                <div class="md-col-span-2">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Bairro</label>
-                  <input
-                    type="text"
-                    required
-                    name="neighborhood"
-                    value="${formData.address.neighborhood}"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                </div>
-                <div class="md-col-span-1">
-                  <label class="block text-sm font-medium text-stone-700 mb-1">Comp.</label>
-                  <input
-                    type="text"
-                    name="complement"
-                    value="${formData.address.complement}"
-                    class="w-full px-4 py-2 rounded-lg border border-stone-200 focus-ring-2 focus-border-primary transition-all outline-none"
-                  />
-                </div>
-                ${errors.address ? `<div class="md-col-span-4 text-xs text-red-500">${errors.address}</div>` : ''}
-              </div>
-            </section>
-
-            <div class="pt-6 border-t border-stone-100">
-              <button 
-                type="submit"
-                class="w-full bg-primary hover-bg-red-700 text-white text-lg font-bold py-4 rounded-xl shadow-lg shadow-red-200 transition-all transform active-scale-99 flex items-center justify-center gap-2"
-              >
-                ${Utils.getIconSVG('CreditCard', 'icon-24')}
-                Ir para Pagamento
-              </button>
-            </div>
-          </form>
+  if (isSubmitting) {
+    main.innerHTML = `
+        <h2 class="font-serif text-3xl font-bold text-center mb-6">Processando Pedido...</h2>
+        <div class="flex justify-center items-center h-48">
+            <p class="text-xl text-stone-500">Aguarde, gerando pagamento PIX...</p>
         </div>
-      </div>
     `;
-    
-    container.querySelector('#back-to-menu-btn').addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
-    const form = container.querySelector('#checkout-form');
-    form.addEventListener('submit', handleSubmit);
-    
-    form.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', handleInputChange);
-    });
-    
-    // lucide.createIcons();
+    return main;
   }
   
-  renderFormContent(main);
+  const { finalTotal, totalItems } = State.CartStore.getCartSummary();
+
+  const errors = Object.values(validationErrors).map(msg => 
+    `<li class="text-red-600 text-sm">${Utils.getIconSVG('x-circle', 'icon-14 inline-block mr-1')} ${msg}</li>`
+  ).join('');
+
+  const formHTML = `
+    <h2 class="font-serif text-3xl font-bold text-center mb-6">Finalizar Pedido</h2>
+    <div class="bg-white p-6 rounded-xl shadow-lg space-y-6">
+        
+        <div class="border-b pb-4">
+            <p class="text-lg font-bold text-dark mb-2">Seu Pedido (${totalItems} itens)</p>
+            <div class="flex justify-between font-medium text-xl">
+                <span>Total a Pagar:</span>
+                <span class="text-primary">${Utils.formatCurrency(finalTotal)}</span>
+            </div>
+        </div>
+
+        ${errors ? `<ul class="bg-red-50 p-3 rounded-md border border-red-600 space-y-1">${errors}</ul>` : ''}
+
+        <form id="checkout-form" class="space-y-4">
+            <h3 class="font-serif text-xl font-bold text-dark">1. Seus Dados</h3>
+            <input type="text" id="fullName" class="input-base" placeholder="Nome Completo" value="${customerData.fullName || ''}" required>
+            <input type="email" id="email" class="input-base" placeholder="Email" value="${customerData.email || ''}" required>
+            <input type="tel" id="phone" class="input-base" placeholder="Telefone (ex: (11) 98765-4321)" value="${customerData.phone || ''}" required maxlength="15">
+            <input type="text" id="cpf" class="input-base" placeholder="CPF (Opcional, para a nota)" value="${customerData.cpf || ''}" maxlength="14">
+
+            <h3 class="font-serif text-xl font-bold text-dark pt-4">2. Endereço de Entrega</h3>
+            <input type="text" id="zipCode" class="input-base" placeholder="CEP" value="${customerData.address.zipCode || ''}" required maxlength="9">
+            <input type="text" id="street" class="input-base" placeholder="Rua / Avenida" value="${customerData.address.street || ''}" required>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="text" id="number" class="input-base" placeholder="Número" value="${customerData.address.number || ''}" required>
+                <input type="text" id="neighborhood" class="input-base" placeholder="Bairro" value="${customerData.address.neighborhood || ''}" required>
+            </div>
+            <input type="text" id="complement" class="input-base" placeholder="Complemento (ex: Apt 101)" value="${customerData.address.complement || ''}">
+            
+            <h3 class="font-serif text-xl font-bold text-dark pt-4">3. Pagamento</h3>
+            <div class="flex items-center p-3 border border-primary rounded-lg bg-red-50">
+                <input type="radio" id="payment-pix" name="payment" value="pix" checked class="h-5 w-5 text-primary focus-ring">
+                <label for="payment-pix" class="ml-3 font-medium text-dark flex items-center">
+                    ${Utils.getIconSVG('zap', 'icon-20 text-green-600 mr-2')}
+                    PIX (Pagamento Instantâneo)
+                </label>
+            </div>
+            
+            <p class="text-sm text-stone-500 pt-2">Ao clicar em "Pagar com PIX", o QR Code será gerado na próxima tela.</p>
+
+            <button type="submit" class="btn btn-secondary w-full text-lg mt-6">
+                Pagar com PIX ${Utils.formatCurrency(finalTotal)}
+            </button>
+        </form>
+        
+        <button id="back-to-menu-btn" class="text-sm text-stone-500 hover-text-dark transition-all w-full mt-4">
+            ← Voltar ao Cardápio
+        </button>
+    </div>
+  `;
+  
+  main.innerHTML = formHTML;
+
+  // Event Listeners for input changes
+  const updateData = (id, value) => {
+    if (id in customerData) {
+        customerData[id] = value;
+    } else if (id in customerData.address) {
+        customerData.address[id] = value;
+    }
+    State.saveCustomerData(customerData);
+    // Clear error for the field being updated
+    delete validationErrors[id];
+  };
+
+  main.querySelector('#fullName').addEventListener('input', (e) => updateData('fullName', e.target.value));
+  main.querySelector('#email').addEventListener('input', (e) => updateData('email', e.target.value));
+  main.querySelector('#phone').addEventListener('input', (e) => updateData('phone', Utils.maskPhone(e.target.value)));
+  main.querySelector('#cpf').addEventListener('input', (e) => updateData('cpf', Utils.maskCPF(e.target.value)));
+  main.querySelector('#zipCode').addEventListener('input', (e) => updateData('zipCode', Utils.maskZipCode(e.target.value)));
+  main.querySelector('#street').addEventListener('input', (e) => updateData('street', e.target.value));
+  main.querySelector('#number').addEventListener('input', (e) => updateData('number', e.target.value));
+  main.querySelector('#neighborhood').addEventListener('input', (e) => updateData('neighborhood', e.target.value));
+  main.querySelector('#complement').addEventListener('input', (e) => updateData('complement', e.target.value));
+
+  main.querySelector('#back-to-menu-btn').addEventListener('click', () => {
+    State.setView(State.APP_VIEWS.MENU);
+  });
+  
+  // Form Submission
+  main.querySelector('#checkout-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+        isSubmitting = true;
+        renderApp(); // Rerender for Loading State
+
+        const finalTotal = State.CartStore.getCartSummary().finalTotal;
+        const result = await Utils.executeInvictusApi(customerData, finalTotal);
+
+        if (result.success) {
+            State.setPixData(result.data);
+            State.CartStore.clearCart(); 
+            State.setView(State.APP_VIEWS.SUCCESS);
+        } else {
+            console.error("Erro no PIX:", result.error);
+            alert(`Erro ao processar pagamento: ${result.error}`);
+            isSubmitting = false;
+            renderApp(); // Rerender to show form again
+        }
+    } else {
+        renderApp(false); // Rerender to display errors
+    }
+  });
+
   return main;
 }
 
+// --- 7. Pix Payment Success View ---
+let pixData = null; 
+let error = null;
+let loading = false;
 
-// --- 7. PixPayment ---
 export function renderPixPayment() {
-  let finalTotal = State.CartStore.cartTotal;
-  let pixData = null;
-  let loading = true;
-  let error = null;
-  let copied = false;
-  
-  const customerData = State.appState.customerData; 
-
-  State.CartStore.clearCart(); 
-
   const main = document.createElement('main');
-  main.className = 'container mx-auto';
+  main.className = 'py-8 container mx-auto px-4 max-w-lg space-y-8 animate-in zoom-in duration-500'; 
   
-  const handleCopy = async (btn) => {
-    try {
-      const code = pixData?.pix?.pix_qr_code;
-      if (!code) throw new Error("Código PIX não disponível.");
-      
-      await navigator.clipboard.writeText(code);
-      copied = true;
-      btn.innerHTML = `${Utils.getIconSVG('Check', 'icon-18')} Copiado!`;
-      btn.classList.remove('bg-stone-800', 'hover-bg-black');
-      btn.classList.add('bg-green-500');
-      
-      setTimeout(() => {
-        copied = false;
-        renderContent(main); 
-      }, 3000);
-
-    } catch (err) {
-      console.error('Failed to copy', err);
-    }
-    renderContent(main); 
-  };
+  if (!State.appState.pixData && !pixData) {
+      // Caso o usuário tente acessar a URL diretamente ou recarregue
+      main.innerHTML = `<div class="text-center p-8"><p class="text-xl text-red-600">Nenhum pagamento PIX ativo encontrado.</p><button id="return-menu" class="btn btn-primary mt-4">Voltar ao Cardápio</button></div>`;
+      main.querySelector('#return-menu')?.addEventListener('click', () => State.setView(State.APP_VIEWS.MENU));
+      return main;
+  }
   
-  const renderContent = (container) => {
-    
-    container.innerHTML = `
-      <div class="max-w-xl mx-auto py-12 px-4 animate-in zoom-in-95 duration-500">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 text-center border-t-8 ${error ? 'border-red-500' : 'border-green-500'}">
-          ${loading ? `
-            <div class="flex flex-col items-center justify-center space-y-4">
-                ${Utils.getIconSVG('LoaderCircle', 'icon-64 text-primary animate-spin')}
-                <h2 class="text-2xl font-serif font-bold text-dark">Gerando PIX...</h2>
-                <p class="text-stone-500">Aguarde enquanto processamos sua transação segura.</p>
-            </div>
-          ` : error ? `
-            <div class="flex flex-col items-center justify-center space-y-4">
-                ${Utils.getIconSVG('XCircle', 'icon-64 text-red-500')}
-                <h2 class="text-2xl font-serif font-bold text-dark">Erro no Pagamento</h2>
-                <p class="text-stone-500">${error}</p>
-                <button 
-                  id="reset-app-btn"
-                  class="text-primary hover-text-dark font-medium flex items-center justify-center gap-2 mx-auto transition-colors mt-4"
-                >
-                  ${Utils.getIconSVG('Home', 'icon-18')}
-                  Voltar para o Início
-                </button>
-            </div>
-          ` : `
-            <div class="mb-6 flex justify-center">
-              <div class="bg-green-100 p-4 rounded-full">
-                ${Utils.getIconSVG('CheckCircle2', 'icon-64 text-green-600')}
-              </div>
+  const currentPixData = State.appState.pixData || pixData;
+  const pixCode = currentPixData.pix.pix_qr_code.content;
+  const qrCodeBase64 = currentPixData.pix.pix_qr_code.base64_image;
+  const finalTotal = currentPixData.amount / 100;
+  
+  main.innerHTML = `
+    <div class="bg-white p-8 rounded-xl shadow-2xl text-center space-y-6">
+        ${Utils.getIconSVG('check-circle', 'icon-64 text-green-600 mx-auto')}
+        <h2 class="font-serif text-3xl font-bold text-dark">Pedido Enviado com Sucesso!</h2>
+        <p class="text-lg text-stone-600">Seu pedido foi registrado. Agora, finalize o pagamento abaixo para iniciarmos a produção da sua pizza.</p>
+        
+        <div class="p-4 bg-stone-50 rounded-lg space-y-3 border border-stone-200">
+            <p class="text-xl font-bold text-primary">Total: ${Utils.formatCurrency(finalTotal)}</p>
+            <div class="flex justify-center">
+                <img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code PIX" class="w-48 h-48 border border-stone-300 rounded-lg shadow-md">
             </div>
             
-            <h2 class="text-3xl font-serif font-bold text-dark mb-2">Pedido Recebido!</h2>
-            <p class="text-stone-500 mb-8">Agora só falta o pagamento para prepararmos sua pizza.</p>
-
-            <div class="bg-stone-50 rounded-xl p-6 mb-8 border border-stone-100">
-              <p class="text-sm font-bold text-stone-400 uppercase tracking-wider mb-1">Valor Total</p>
-              <p class="font-bold text-4xl text-dark mb-6">${Utils.formatCurrency(finalTotal)}</p>
-
-              <div class="space-y-4">
-                ${pixData?.pix?.qr_code_base64 ? `
-                    <div class="flex justify-center mb-4">
-                        <img src="data:image/png;base64,${pixData.pix.qr_code_base64}" alt="QR Code PIX" class="w-32 h-32 border border-stone-200 p-1 rounded-lg">
-                    </div>
-                ` : ''}
-
-                <div class="text-left">
-                  <label class="text-xs font-semibold text-stone-500 uppercase ml-1">Pix Copia e Cola</label>
-                  <div class="flex gap-2 mt-1">
-                    <input 
-                      readOnly 
-                      value="${pixData?.pix?.pix_qr_code || ''}" 
-                      id="pix-code-input"
-                      class="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-400 truncate"
-                    />
-                    <button 
-                      id="copy-pix-btn"
-                      class="flex-shrink-0 px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${
-                        copied 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-stone-800 text-white hover-bg-black'
-                      }"
-                    >
-                      ${copied ? Utils.getIconSVG('Check', 'icon-18') : Utils.getIconSVG('Copy', 'icon-18')}
-                      ${copied ? 'Copiado!' : 'Copiar'}
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="text-xs text-stone-400 bg-white p-3 rounded-lg border border-dashed border-stone-300">
-                  <p>1. Abra o app do seu banco</p>
-                  <p>2. Escolha pagar via PIX > Copia e Cola</p>
-                  <p>3. Cole o código acima e confirme</p>
-                  <p class="mt-2 text-stone-500">Protocolo: ${pixData?.hash || 'N/A'}</p>
-                </div>
-              </div>
+            <p class="font-medium text-dark pt-2">Pague usando o QR Code acima ou copie o código PIX:</p>
+            <div class="relative">
+                <input type="text" id="pix-copy-code" class="input-base text-center text-sm font-mono pr-12" value="${pixCode}" readonly>
+                <button id="copy-pix-btn" class="absolute right-0 top-0 h-full p-2 text-stone-500 hover-text-primary transition-all" aria-label="Copiar código PIX">
+                    ${Utils.getIconSVG('copy', 'icon-20')}
+                </button>
             </div>
-
-            <button 
-              id="reset-app-btn"
-              class="text-stone-500 hover-text-primary font-medium flex items-center justify-center gap-2 mx-auto transition-colors"
-            >
-              ${Utils.getIconSVG('Home', 'icon-18')}
-              Voltar para o Início
-            </button>
-          `}
+            <p class="text-xs text-stone-500">Validade: 24 horas</p>
         </div>
-      </div>
-    `;
-    
-    if (!loading && !error) {
-        container.querySelector('#copy-pix-btn')?.addEventListener('click', (e) => handleCopy(e.currentTarget));
-    }
-    container.querySelector('#reset-app-btn')?.addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
-    
-    if (copied) {
-        const input = container.querySelector('#pix-code-input');
-        if (input) {
-             input.select();
-             input.setSelectionRange(0, 99999);
-        }
-    }
+        
+        <p class="text-sm text-stone-600">A confirmação do pagamento é instantânea.</p>
 
-    // lucide.createIcons();
-  };
-
-  const generatePix = async () => {
-    renderContent(main); 
-
-    if (finalTotal <= 0) {
-        error = "O total do pedido deve ser maior que zero. Adicione itens ao carrinho.";
-        loading = false;
-        renderContent(main);
-        return;
-    }
-
-    if (!customerData) {
-        error = "Dados do cliente não foram encontrados. Volte ao Checkout e preencha o formulário.";
-        loading = false;
-        renderContent(main);
-        return;
-    }
-    
-    const invictusCustomerData = {
-        name: customerData.fullName,
-        document: customerData.cpf.replace(/\D/g, ''),
-        phone_number: customerData.phone.replace(/\D/g, ''),
-        email: customerData.email,
-        zip_code: customerData.address.zipCode.replace(/\D/g, ''),
-        number: customerData.address.number,
-        street_name: customerData.address.street,
-        neighborhood: customerData.address.neighborhood,
-        city: "Sao Paulo", 
-        state: "SP", 
-    };
-
-    const valorEmCentavos = Math.round(finalTotal * 100);
-
-    const payload = {
-        "amount": valorEmCentavos, 
-        "offer_hash": State.OFFER_HASH_DEFAULT, 
-        "payment_method": "pix", 
-        "customer": invictusCustomerData, 
-        "cart": [{
-            "product_hash": State.OFFER_HASH_DEFAULT,
-            "title": "Pedido Nona's Pizzeria",
-            "price": valorEmCentavos,
-            "quantity": 1,
-            "operation_type": 1, 
-            "tangible": true
-        }],
-        "installments": 1,
-        "expire_in_days": 1,
-        "transaction_origin": "api"
-    };
-
-    const result = await Utils.executeInvictusApi(payload);
-
-    if (result.success) {
-        pixData = result.data;
-    } else {
-        error = result.error;
-    }
-
-    loading = false;
-    renderContent(main); 
-  };
+        <button id="return-to-menu-btn" class="btn btn-primary w-full mt-4">
+            Voltar ao Cardápio
+        </button>
+    </div>
+  `;
   
-  generatePix();
+  main.querySelector('#copy-pix-btn').addEventListener('click', (e) => {
+    const copyText = main.querySelector('#pix-copy-code');
+    copyText.select();
+    document.execCommand('copy');
+    
+    // Feedback visual
+    const iconContainer = e.currentTarget;
+    iconContainer.innerHTML = Utils.getIconSVG('check', 'icon-20 text-green-600');
+    setTimeout(() => {
+        iconContainer.innerHTML = Utils.getIconSVG('copy', 'icon-20');
+    }, 2000);
+  });
+  
+  main.querySelector('#return-to-menu-btn').addEventListener('click', () => {
+    State.setView(State.APP_VIEWS.MENU);
+    State.setPixData(null); // Clear PIX data after navigating away
+  });
 
   return main;
 }
@@ -1068,9 +672,11 @@ export function renderPixPayment() {
 
 // --- III. INITIALIZATION ---
 
-State.initRenderAppRef(renderApp); 
-
+// Inicializa a aplicação após o DOM estar pronto
 document.addEventListener('DOMContentLoaded', () => {
-  State.CartStore.init(); 
-  renderApp();      
+    // Carrega o estado do carrinho do localStorage e renderiza
+    State.CartStore.init(renderApp);
+    
+    // Renderiza a aplicação principal
+    renderApp();
 });
