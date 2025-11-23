@@ -11,12 +11,84 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     
-    <script src="https://unpkg.com/lucide@latest"></script> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
     <link rel="stylesheet" href="style.css">
   </head>
-  <body class="bg-stone-50 text-stone-800 antialiased">
-    <div id="root" class="min-h-screen">
+  <body>
+    
+    <header class="app-header">
+      <div class="container header-content">
+        <button id="nav-to-menu-logo" class="logo-btn">
+          <div class="logo-icon-wrapper">
+            <i class="fa-solid fa-utensils icon-24 text-white"></i>
+          </div>
+          <span class="logo-text">
+            Nona's <span>Pizzeria</span>
+          </span>
+        </button>
+
+        <nav class="nav-actions">
+          <button id="nav-to-menu-btn" class="btn-ghost mobile-hidden">
+            Voltar ao Menu
+          </button>
+          
+          <button id="open-cart-btn" class="cart-trigger-btn" aria-label="Abrir Carrinho">
+            <i class="fa-solid fa-cart-shopping icon-24"></i>
+            <span id="header-cart-count" class="cart-count hidden">0</span>
+          </button>
+        </nav>
       </div>
+
+      <div class="promo-bar">
+        <div class="container promo-content">
+          <div class="promo-text">
+            <span class="promo-tag">OFERTA RELÂMPAGO</span>
+            <span>25% OFF em tudo • <strong>50% OFF</strong> na 2ª pizza!</span>
+          </div>
+          <div class="promo-timer">
+            <i class="fa-regular fa-clock"></i>
+            <span id="countdown-timer">00:59:59</span>
+          </div>
+        </div>
+      </div>
+      
+      <div id="category-nav-container" class="category-nav-wrapper">
+        <div class="container category-scroll"></div>
+      </div>
+    </header>
+
+    <main id="main-content" class="container app-main">
+      </main>
+
+    <div id="toast-container" class="toast-container"></div>
+    
+    <div id="sales-pop-container" class="sales-pop-container"></div>
+
+    <aside id="cart-drawer" class="cart-drawer" aria-hidden="true">
+      <div id="cart-backdrop" class="cart-backdrop"></div>
+      <div class="cart-panel">
+        <div class="cart-header">
+          <h2 class="cart-title">
+            <i class="fa-solid fa-bag-shopping icon-20 text-primary"></i>
+            Seu Pedido
+          </h2>
+          <button id="close-cart-btn" class="btn-icon">
+            <i class="fa-solid fa-xmark icon-20"></i>
+          </button>
+        </div>
+        <div id="cart-items-container" class="cart-body"></div>
+        <div id="cart-footer" class="cart-footer hidden">
+          <div class="cart-total-row">
+            <span>Total</span>
+            <span id="cart-total-value" class="total-price">R$ 0,00</span>
+          </div>
+          <button id="checkout-btn" class="btn-primary btn-full">
+            Finalizar Pedido
+          </button>
+        </div>
+      </div>
+    </aside>
     
     <script type="module" src="app.js"></script> 
   </body>
