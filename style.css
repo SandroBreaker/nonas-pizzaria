@@ -1,23 +1,24 @@
 /* style.css - CSS PURO (Refinado: Botões e Animações) */
 
-/* --- Variáveis e Reset Básico --- */
+/*  --- Variáveis e Reset Básico --- */
 :root {
-  --color-primary: #e11d48; /* Red-600 */
-  --color-primary-dark: #b91c1c; /* Red-700 */
-  --color-secondary: #f97316; /* Orange-500 */
-  --color-dark: #1c1917; /* Stone-900 */
-  --color-text: #44403c; /* Stone-800 */
-  --color-bg: #BB3E00; /* ATUALIZADO: Bege mais escuro para maior contraste */
-  --color-border: #f5f5f4; /* Stone-100 */
-  --color-medium-gray: #78716c; /* Stone-500 */
-  --color-light-gray: #d6d3d1; /* Stone-300 */
+  --color-primary: #b42323; /* NOVO: (180,35,35) - Principal Cor de Destaque */
+  --color-primary-dark: #840f0f; /* NOVO: (132,15,15) - Variante Mais Escura (Hover) */
+  --color-secondary: #650909; /* NOVO: (101,9,9) - Cor Secundária (Laranja/Marrom Escuro) */
+  --color-dark: #1c0808; /* NOVO: (28,8,8) - Cor Principal para Títulos e Fundos Escuros */
+  --color-text: #1c0808; /* NOVO: Usando o Dark para o texto principal */
+  --color-bg: #f1d0a2; /* NOVO: (241,208,162) - Fundo Principal Claro */
+  --color-border: #f5f5f4; /* Mantido, cinza claro para bordas */
+  --color-medium-gray: #78716c; /* Mantido para textos secundários */
+  --color-light-gray: #d6d3d1; /* Mantido para fundos leves */
   --color-green: #22c55e;
   --color-light-green: #dcfce7;
-  --color-red: #ef4444;
-  --color-light-red: #fef2f2;
+  --color-red: #b42323; /* Mapeado para a nova primary */
+  --color-light-red: #fef2f2; 
   --font-family-sans: 'Inter', sans-serif;
   --font-family-serif: 'Playfair Display', serif;
 }
+
 
 * {
   box-sizing: border-box;
