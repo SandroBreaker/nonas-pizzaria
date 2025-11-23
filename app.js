@@ -100,7 +100,7 @@ function startSalesPop() {
       setTimeout(() => pop.remove(), 500);
     }, 5000);
 
-  }, 40000); 
+  }, 15000); 
 }
 
 // --- III. UI UPDATERS ---
