@@ -918,7 +918,7 @@ export function renderPixPayment() {
 
             <div class="bg-stone-50 rounded-xl p-6 mb-8 border border-stone-100">
               <p class="text-sm font-bold text-stone-400 uppercase tracking-wider mb-1">Valor Total</p>
-              <p class="text-4xl font-bold text-dark mb-6">${Utils.formatCurrency(finalTotal)}</p>
+              <p class="4xl font-bold text-dark mb-6">${Utils.formatCurrency(finalTotal)}</p>
 
               <div class="space-y-4">
                 ${pixData?.pix?.qr_code_base64 ? `
@@ -928,7 +928,7 @@ export function renderPixPayment() {
                 ` : ''}
 
                 <div class="text-left">
-                  <label class="text-xs font-semibold text-stone-500 uppercase ml-1">Pix Copia e Cola</label>
+                  <label class="xs font-semibold text-stone-500 uppercase ml-1">Pix Copia e Cola</label>
                   <div class="flex gap-2 mt-1">
                     <input 
                       readOnly 
