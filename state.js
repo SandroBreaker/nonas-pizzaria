@@ -7,7 +7,7 @@ export const PIZZA_SIZES = {
 };
 
 export const CATEGORIES = {
-  PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA',
+  PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES', // Adicionado AVALIAÇÕES
 };
 
 export const APP_VIEWS = {

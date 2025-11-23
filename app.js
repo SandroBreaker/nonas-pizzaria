@@ -19,7 +19,10 @@ export function renderApp(onlyCartUpdate = false) {
   renderCartDrawer();
 
   // Se for apenas uma atualização do carrinho, não precisamos redesenhar o conteúdo principal
-  if (onlyCartUpdate) return;
+  if (onlyCartUpdate) {
+    lucide.createIcons(); // Chama aqui também para garantir ícones no Drawer
+    return;
+  }
   
   // 3. Remove o conteúdo anterior (main)
   let mainContent = root.querySelector('main');
@@ -49,6 +52,9 @@ export function renderApp(onlyCartUpdate = false) {
   } else {
     root.appendChild(newContent);
   }
+  
+  // 5. ATUALIZADO: Processa TODOS os ícones APÓS TODOS os elementos estarem no DOM.
+  lucide.createIcons(); 
 }
 
 // --- II. COMPONENTS LOGIC ---
@@ -232,7 +238,8 @@ export function renderHeader() {
             <div class="container flex justify-start items-center gap-3 overflow-x-auto whitespace-nowrap py-2">
                 ${Object.values(State.CATEGORIES).map(category => {
                     const isActive = category === currentCategory;
-                    const label = category.charAt(0) + category.slice(1).toLowerCase();
+                    // Lógica para label da categoria, tratando 'AVALIAÇÕES'
+                    const label = category === State.CATEGORIES.REVIEW ? 'Avaliações' : category.charAt(0) + category.slice(1).toLowerCase();
                     return `
                         <button 
                             data-category="${category}"
@@ -270,7 +277,7 @@ export function renderHeader() {
       });
   }
 
-  lucide.createIcons(); 
+  // lucide.createIcons() REMOVIDO DAQUI
 }
 
 // --- 3. CartDrawer ---
@@ -439,7 +446,7 @@ export function renderCartDrawer() {
     State.navigate(State.APP_VIEWS.CHECKOUT);
   });
   
-  lucide.createIcons(); 
+  // lucide.createIcons() REMOVIDO DAQUI
 }
 
 // --- 4. ReviewsSection ---
@@ -456,14 +463,15 @@ const REVIEWS = [
 export function renderReviewsSection() {
   const section = document.createElement('section');
   section.id = 'reviews-section';
-  section.className = 'container mx-auto px-4 py-12 space-y-8 bg-white rounded-3xl shadow-xl border border-stone-100 mt-12';
+  // Removido classes de container/espaçamento externo, e mt-12. Agora será apenas o card de avaliações.
+  section.className = 'py-12 space-y-8 bg-white rounded-3xl shadow-xl border border-stone-100';
 
   section.innerHTML = `
-    <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3">
+    <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3 px-4">
       <span class="w-8 h-1 bg-primary rounded-full"></span>
       Avaliações dos Clientes
     </h2>
-    <div class="space-y-6">
+    <div class="space-y-6 px-4">
       ${REVIEWS.map(review => `
         <div class="border-b border-stone-100 pb-6 last:border-b-0">
           <div class="flex items-center gap-3 mb-2">
@@ -500,7 +508,7 @@ export function renderReviewsSection() {
     </div>
   `;
   
-  lucide.createIcons(); 
+  // lucide.createIcons() REMOVIDO DAQUI
   return section;
 }
 
@@ -508,7 +516,7 @@ export function renderReviewsSection() {
 // --- 5. Menu ---
 export function renderMenu() {
   const main = document.createElement('main');
-  main.className = 'py-8 space-y-12'; 
+  main.className = 'py-8 space-y-16'; 
 
   const currentCategory = State.appState.selectedCategory;
 
@@ -547,50 +555,55 @@ export function renderMenu() {
   // 2. Menu Content (Contained)
   const menuContent = document.createElement('div');
   menuContent.id = 'menu-sections-container';
-  menuContent.className = 'container mx-auto px-4 space-y-12'; 
+  menuContent.className = 'container mx-auto px-4'; 
+
+  // Lógica para alternar entre Menu de Produtos e Seção de Avaliações
   
-  // Renderiza APENAS a seção da categoria selecionada
-  const categoryItems = State.MENU_ITEMS.filter(i => i.category === currentCategory);
-    
-  if (categoryItems.length > 0) {
-    const section = document.createElement('section');
-    section.id = currentCategory.toLowerCase();
-    section.className = 'animate-in fade-in duration-300 scroll-mt-24'; 
-    
-    const title = currentCategory === State.CATEGORIES.PIZZA ? 'Pizzas Especiais' : 
-                  currentCategory === State.CATEGORIES.DRINK ? 'Bebidas' : 'Sobremesas';
-    const indicatorColorClass = currentCategory === State.CATEGORIES.PIZZA ? 'bg-secondary' : 'bg-stone-300';
-    
-    let gridClasses;
-    if (currentCategory === State.CATEGORIES.PIZZA) {
-      gridClasses = 'grid-cols-2 gap-6 product-cards-grid'; 
-    } else {
-      gridClasses = 'grid-cols-1 md-grid-cols-2 lg-grid-cols-4 gap-6 product-cards-grid';
+  if (currentCategory === State.CATEGORIES.REVIEW) {
+    // RENDERIZA AVALIAÇÕES como o conteúdo principal
+    menuContent.appendChild(renderReviewsSection());
+  } else {
+    // RENDERIZA CATEGORIA DE PRODUTOS
+    const categoryItems = State.MENU_ITEMS.filter(i => i.category === currentCategory);
+      
+    if (categoryItems.length > 0) {
+      const section = document.createElement('section');
+      section.id = currentCategory.toLowerCase();
+      section.className = 'animate-in fade-in duration-300 scroll-mt-24'; 
+      
+      const title = currentCategory === State.CATEGORIES.PIZZA ? 'Pizzas Especiais' : 
+                    currentCategory === State.CATEGORIES.DRINK ? 'Bebidas' : 'Sobremesas';
+      const indicatorColorClass = currentCategory === State.CATEGORIES.PIZZA ? 'bg-secondary' : 'bg-stone-300';
+      
+      let gridClasses;
+      // ATUALIZADO: Usando gap-10 (2.5rem) para aumentar o espaçamento entre cards
+      if (currentCategory === State.CATEGORIES.PIZZA) {
+        gridClasses = 'grid-cols-2 gap-10 product-cards-grid'; 
+      } else {
+        gridClasses = 'grid-cols-1 md-grid-cols-2 lg-grid-cols-4 gap-10 product-cards-grid'; 
+      }
+      
+      section.innerHTML = `
+        <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3">
+          <span class="w-8 h-1 ${indicatorColorClass} rounded-full"></span>
+          ${title}
+        </h2>
+        <div class="${gridClasses}">
+        </div>
+      `;
+      
+      const grid = section.querySelector('.product-cards-grid');
+      categoryItems.forEach(item => {
+        grid.appendChild(renderProductCard(item));
+      });
+      
+      menuContent.appendChild(section);
     }
-    
-    section.innerHTML = `
-      <h2 class="font-serif text-3xl font-bold text-dark mb-6 flex items-center gap-3">
-        <span class="w-8 h-1 ${indicatorColorClass} rounded-full"></span>
-        ${title}
-      </h2>
-      <div class="${gridClasses}">
-      </div>
-    `;
-    
-    const grid = section.querySelector('.product-cards-grid');
-    categoryItems.forEach(item => {
-      grid.appendChild(renderProductCard(item));
-    });
-    
-    menuContent.appendChild(section);
   }
 
   main.appendChild(heroWrapper);
   main.appendChild(menuContent);
   
-  // 3. Adiciona a Seção de Avaliações
-  main.appendChild(renderReviewsSection()); 
-
   heroWrapper.querySelector('#scroll-to-menu-btn').addEventListener('click', () => {
     document.getElementById(State.CATEGORIES.PIZZA.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
     State.setSelectedCategory(State.CATEGORIES.PIZZA);
@@ -837,7 +850,7 @@ export function renderCheckoutForm() {
         input.addEventListener('input', handleInputChange);
     });
     
-    lucide.createIcons();
+    // lucide.createIcons() REMOVIDO DAQUI
   }
   
   renderFormContent(main);
@@ -984,7 +997,7 @@ export function renderPixPayment() {
         }
     }
 
-    lucide.createIcons();
+    // lucide.createIcons() REMOVIDO DAQUI
   };
 
   const generatePix = async () => {
