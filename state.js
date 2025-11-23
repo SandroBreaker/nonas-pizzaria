@@ -7,7 +7,7 @@ export const PIZZA_SIZES = {
 };
 
 export const CATEGORIES = {
-  PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES', // Adicionado AVALIAÇÕES
+  PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES', 
 };
 
 export const APP_VIEWS = {
@@ -21,14 +21,15 @@ export const PIX_KEY_MOCK = '12345678901@pix.com.br';
 export const CART_STORAGE_KEY = 'nona-pizzeria-cart-v1';
 
 export const MENU_ITEMS = [
-  { id: 1, name: "Calabresa", description: "Mussarela, calabresa fatiada, cebola e azeitonas.", category: CATEGORIES.PIZZA, basePrice: 40.0, priceModifiers: { M: 40.0, G: 55.0, F: 68.0 }, imageUrl: "https://images.unsplash.com/photo-1590947132387-155cc02f3212?q=80&w=1920&auto=format&fit=crop" },
-  { id: 2, name: "Marguerita", description: "Mussarela, rodelas de tomate, manjericão fresco e parmesão ralado.", category: CATEGORIES.PIZZA, basePrice: 45.0, priceModifiers: { M: 45.0, G: 60.0, F: 75.0 }, imageUrl: "https://images.unsplash.com/photo-1574126154517-d1e0d89ef734?q=80&w=1920&auto=format&fit=crop" },
-  { id: 3, name: "Portuguesa", description: "Mussarela, presunto, ovos, cebola, azeitonas e ervilha.", category: CATEGORIES.PIZZA, basePrice: 42.0, priceModifiers: { M: 42.0, G: 58.0, F: 70.0 }, imageUrl: "https://images.unsplash.com/photo-1565299624942-434062d73287?q=80&w=1920&auto=format&fit=crop" },
-  { id: 4, name: "Quatro Queijos", description: "Mussarela, provolone, gorgonzola e catupiry.", category: CATEGORIES.PIZZA, basePrice: 48.0, priceModifiers: { M: 48.0, G: 65.0, F: 80.0 }, imageUrl: "https://images.unsplash.com/photo-1549480398-31950e3262ce?q=80&w=1920&auto=format&fit=crop" },
-  { id: 5, name: "Coca-Cola Lata", description: "Refrigerante clássico (350ml).", category: CATEGORIES.DRINK, basePrice: 6.0, imageUrl: "https://images.unsplash.com/photo-1553530366-5d6c8e31a0e1?q=80&w=1920&auto=format&fit=crop" },
-  { id: 6, name: "Guaraná Antarctica 2L", description: "Refrigerante de Guaraná (2 litros).", category: CATEGORIES.DRINK, basePrice: 12.0, imageUrl: "https://images.unsplash.com/photo-1543825968-07e5f32a7e78?q=80&w=1920&auto=format&fit=crop" },
-  { id: 7, name: "Brownie de Chocolate", description: "Brownie quente com nozes e cobertura de chocolate.", category: CATEGORIES.DESSERT, basePrice: 15.0, imageUrl: "https://images.unsplash.com/photo-1575971485603-9d8a3d5e2e8e?q=80&w=1920&auto=format&fit=crop" },
-  { id: 8, name: "Petit Gateau", description: "Bolo de chocolate com recheio cremoso e sorvete de baunilha.", category: CATEGORIES.DESSERT, basePrice: 18.0, imageUrl: "https://images.unsplash.com/photo-1558231908-410a6245d8b7?q=80&w=1920&auto=format&fit=crop" },
+  // Preços originais reduzidos em 35% (x 0.65)
+  { id: 1, name: "Calabresa", description: "Mussarela, calabresa fatiada, cebola e azeitonas.", category: CATEGORIES.PIZZA, basePrice: 26.00, priceModifiers: { M: 26.00, G: 35.75, F: 44.20 }, imageUrl: "assets/pizza-calabresa.jpg" },
+  { id: 2, name: "Marguerita", description: "Mussarela, rodelas de tomate, manjericão fresco e parmesão ralado.", category: CATEGORIES.PIZZA, basePrice: 29.25, priceModifiers: { M: 29.25, G: 39.00, F: 48.75 }, imageUrl: "assets/pizza-marguerita.jpg" },
+  { id: 3, name: "Portuguesa", description: "Mussarela, presunto, ovos, cebola, azeitonas e ervilha.", category: CATEGORIES.PIZZA, basePrice: 27.30, priceModifiers: { M: 27.30, G: 37.70, F: 45.50 }, imageUrl: "assets/pizza-portuguesa.jpg" },
+  { id: 4, name: "Quatro Queijos", description: "Mussarela, provolone, gorgonzola e catupiry.", category: CATEGORIES.PIZZA, basePrice: 31.20, priceModifiers: { M: 31.20, G: 42.25, F: 52.00 }, imageUrl: "assets/pizza-queijos.jpg" },
+  { id: 5, name: "Coca-Cola Lata", description: "Refrigerante clássico (350ml).", category: CATEGORIES.DRINK, basePrice: 3.90, imageUrl: "assets/coca-lata.jpg" },
+  { id: 6, name: "Guaraná Antarctica 2L", description: "Refrigerante de Guaraná (2 litros).", category: CATEGORIES.DRINK, basePrice: 7.80, imageUrl: "assets/guarana-2l.jpg" },
+  { id: 7, name: "Brownie de Chocolate", description: "Brownie quente com nozes e cobertura de chocolate.", category: CATEGORIES.DESSERT, basePrice: 9.75, imageUrl: "assets/brownie.jpg" },
+  { id: 8, name: "Petit Gateau", description: "Bolo de chocolate com recheio cremoso e sorvete de baunilha.", category: CATEGORIES.DESSERT, basePrice: 11.70, imageUrl: "assets/petit-gateau.jpg" },
 ];
 
 

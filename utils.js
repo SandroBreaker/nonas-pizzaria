@@ -19,13 +19,10 @@ export function getIconSVG(iconName, className = '') {
   
   const iconFunction = lucide.icons[iconName];
   
-  // CORREÇÃO: Chamamos a função do ícone (que é o que está em lucide.icons)
-  // e usamos .toString() para obter a string SVG.
   if (typeof iconFunction === 'function') {
     return iconFunction({ class: className }).toString();
   }
   
-  // Caso de fallback (idealmente nunca deve ser alcançado)
   return ''; 
 }
 
