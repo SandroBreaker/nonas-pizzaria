@@ -13,6 +13,12 @@ export function renderApp(onlyCartUpdate = false) {
   if (onlyCartUpdate) return;
   
   const mainContent = document.getElementById('main-content');
+  
+  // Se ainda estiver carregando (MENU_ITEMS vazio) e estiver no menu, espera
+  if (State.MENU_ITEMS.length === 0 && State.appState.currentView === State.APP_VIEWS.MENU) {
+      return; 
+  }
+
   mainContent.innerHTML = ''; 
   
   let newContent;
@@ -382,6 +388,9 @@ function renderMenu() {
           
           menuSection.appendChild(sectionTitle);
           menuSection.appendChild(grid);
+      } else {
+          // Empty state para categoria
+          menuSection.innerHTML = `<div class="text-center py-8 text-stone-500">Nenhum produto nesta categoria.</div>`;
       }
   }
 
@@ -430,17 +439,13 @@ function renderPixPayment() {
     container.className = "pix-container animate-in";
     const total = State.CartStore.cartTotal;
     const customer = State.appState.customerData;
-
-    if(total > 0 && customer) {
-        State.confirmOrder(total);
-    }
     
     const renderState = (state, data = null) => {
         if (state === 'LOADING') {
              container.innerHTML = `
                 <div class="pix-card">
                     ${Utils.getIcon('LoaderCircle', 'icon-64 text-primary fa-spin')}
-                    <h2 class="text-xl font-bold mt-4">Gerando PIX...</h2>
+                    <h2 class="text-xl font-bold mt-4">Gerando Pedido...</h2>
                 </div>
              `;
         } else if (state === 'ERROR') {
@@ -511,38 +516,66 @@ function renderPixPayment() {
             return;
         }
 
-        const payload = {
-            "amount": Math.round(currentTotal * 100),
-            "offer_hash": State.OFFER_HASH_DEFAULT,
-            "payment_method": "pix",
-            "installments": 1, 
-            "customer": {
-                name: customer.fullName,
-                document: customer.cpf.replace(/\D/g, ''),
-                phone_number: customer.phone.replace(/\D/g, ''),
-                email: customer.email,
-                zip_code: customer.address.zipCode.replace(/\D/g, ''),
-                number: customer.address.number,
-                street_name: customer.address.street,
-                neighborhood: customer.address.neighborhood,
-                city: customer.address.city || "Sao Paulo", 
-                state: customer.address.state || "SP"
-            },
-            "cart": [{ 
-                "product_hash": State.OFFER_HASH_DEFAULT, 
-                "title": "Pedido Nona", 
-                "price": Math.round(currentTotal * 100), 
-                "quantity": 1, 
-                "tangible": true,
-                "operation_type": 1 
-            }],
-            "expire_in_days": 1,
-            "transaction_origin": "api"
-        };
+        try {
+            // 1. Cria Pedido no Banco de Dados PRIMEIRO para ter o ID
+            let orderId = State.appState.lastOrder ? State.appState.lastOrder.id : null;
+            
+            if(!orderId) {
+                const dbOrder = await State.createOrder({
+                    customer: customer,
+                    items: State.CartStore.items,
+                    total: currentTotal
+                });
+                
+                // Atualiza estado e limpa carrinho
+                State.confirmOrder(currentTotal, dbOrder.id);
+                orderId = dbOrder.id;
+            }
 
-        const res = await Utils.executeInvictusApi(payload);
-        if(res.success) renderState('SUCCESS', res.data.pix || res.data);
-        else renderState('ERROR', res.error);
+            // 2. Chama API de Pagamento
+            const payload = {
+                "amount": Math.round(currentTotal * 100),
+                "offer_hash": State.OFFER_HASH_DEFAULT,
+                "payment_method": "pix",
+                "installments": 1, 
+                "customer": {
+                    name: customer.fullName,
+                    document: customer.cpf.replace(/\D/g, ''),
+                    phone_number: customer.phone.replace(/\D/g, ''),
+                    email: customer.email,
+                    zip_code: customer.address.zipCode.replace(/\D/g, ''),
+                    number: customer.address.number,
+                    street_name: customer.address.street,
+                    neighborhood: customer.address.neighborhood,
+                    city: customer.address.city || "Sao Paulo", 
+                    state: customer.address.state || "SP"
+                },
+                "cart": [{ 
+                    "product_hash": State.OFFER_HASH_DEFAULT, 
+                    "title": `Nona Pizza #${orderId.slice(0,6)}`, 
+                    "price": Math.round(currentTotal * 100), 
+                    "quantity": 1, 
+                    "tangible": true,
+                    "operation_type": 1 
+                }],
+                // Importante: Passamos o ID do banco como referência externa se a API suportar,
+                // ou usamos para conciliação no Webhook
+                "external_reference": orderId,
+                "expire_in_days": 1
+            };
+
+            const res = await Utils.executeInvictusApi(payload);
+            
+            if(res.success) {
+                renderState('SUCCESS', res.data.pix || res.data);
+            } else {
+                renderState('ERROR', res.error);
+            }
+            
+        } catch(e) {
+            console.error(e);
+            renderState('ERROR', "Falha ao registrar pedido. Tente novamente.");
+        }
     })();
 
     return container;
@@ -604,7 +637,6 @@ function startSalesPop() {
 
   }, 40000); 
 }
-
 
 function updateHeaderUI() {
     const count = State.CartStore.itemsCount;
@@ -741,13 +773,23 @@ function updateCartUI() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     State.initRenderAppRef(renderApp, showToast);
+    
+    // --- LÓGICA DE INICIALIZAÇÃO ASSÍNCRONA ---
+    // Aguarda carregar produtos do banco antes de liberar o app
+    await State.initApp();
+    
+    // Remove o loader
+    const loader = document.getElementById('app-loader');
+    if(loader) loader.remove();
+
     State.CartStore.init();
 
     startCountdown();
     startSalesPop();
 
+    // Event Listeners UI
     document.getElementById('nav-to-menu-logo').addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
     const navBtn = document.getElementById('nav-to-menu-btn');
     if(navBtn) navBtn.addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
@@ -771,15 +813,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(checkoutBtn) {
         checkoutBtn.addEventListener('click', () => {
             State.CartStore.isCartOpen = false;
-            
             const savedProfile = State.getUserProfile();
-            const isProfileComplete = savedProfile && 
-                                      savedProfile.fullName && 
-                                      savedProfile.phone && 
-                                      savedProfile.cpf && 
-                                      savedProfile.address &&
-                                      savedProfile.address.street;
-
+            // Validação simples
+            const isProfileComplete = savedProfile && savedProfile.fullName && savedProfile.cpf && savedProfile.address && savedProfile.address.street;
             if (isProfileComplete) {
                 State.setCustomerData(savedProfile);
                 State.navigate(State.APP_VIEWS.SUCCESS);
