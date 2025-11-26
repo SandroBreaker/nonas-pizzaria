@@ -411,4 +411,50 @@ input { outline: none; font-family: inherit; }
 .faq-item[open] summary::after { content: '-'; }
 .faq-item p { margin-top: 0.5rem; color: var(--color-text-muted); font-size: 0.9rem; }
 
+/* style.css - Adicione ao final */
+
+/* Container do Login */
+.login-toggle-container {
+    display: flex;
+    background: #e7e5e4;
+    padding: 4px;
+    border-radius: 99px;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-radius: 99px;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.toggle-btn.active {
+    background: white;
+    color: var(--color-primary);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.admin-login-box {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.admin-icon-box {
+    background: #fef2f2;
+    color: var(--color-primary);
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+
 .profile-header-simple { margin-bottom: 1.5rem; padding: 0 1rem; }
