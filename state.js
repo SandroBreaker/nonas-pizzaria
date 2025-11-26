@@ -1,4 +1,13 @@
 // state.js
+import * as Utils from './utils.js';
+
+// --- CONFIGURAÇÃO SUPABASE ---
+// Substitua pelas suas credenciais do painel do Supabase
+const SUPABASE_URL = 'SUA_URL_SUPABASE_AQUI'; 
+const SUPABASE_KEY = 'SUA_KEY_ANON_AQUI';
+
+export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 export const PIZZA_SIZES = { M: 'M', G: 'G', F: 'F' };
 export const CATEGORIES = { PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES' };
 export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE', FAQ: 'FAQ', CONTACT: 'CONTACT' };
@@ -9,16 +18,8 @@ export const OFFER_HASH_DEFAULT = "png8aj6v6p";
 export const CART_STORAGE_KEY = 'nona-pizzeria-cart-v1';
 export const USER_STORAGE_KEY = 'nona-pizzeria-user-v1';
 
-export const MENU_ITEMS = [
-  { id: 1, name: "Calabresa", description: "Mussarela, calabresa fatiada, cebola e azeitonas.", category: CATEGORIES.PIZZA, basePrice: 24.95, priceModifiers: { M: 24.95, G: 34.90, F: 42.90 }, imageUrl: "assets/pizza-calabresa.jpg" },
-  { id: 2, name: "Marguerita", description: "Mussarela, rodelas de tomate, manjericão fresco e parmesão ralado.", category: CATEGORIES.PIZZA, basePrice: 27.50, priceModifiers: { M: 27.50, G: 38.50, F: 46.50 }, imageUrl: "assets/pizza-marguerita.jpg" },
-  { id: 3, name: "Portuguesa", description: "Mussarela, presunto, ovos, cebola, azeitonas e ervilha.", category: CATEGORIES.PIZZA, basePrice: 26.00, priceModifiers: { M: 26.00, G: 36.40, F: 44.00 }, imageUrl: "assets/pizza-portuguesa.jpg" },
-  { id: 4, name: "Quatro Queijos", description: "Mussarela, provolone, gorgonzola e catupiry.", category: CATEGORIES.PIZZA, basePrice: 29.95, priceModifiers: { M: 29.95, G: 41.90, F: 50.90 }, imageUrl: "assets/pizza-queijos.jpg" },
-  { id: 5, name: "Coca-Cola Lata", description: "Refrigerante clássico (350ml).", category: CATEGORIES.DRINK, basePrice: 3.50, imageUrl: "assets/coca-lata.jpg" },
-  { id: 6, name: "Guaraná Antarctica 2L", description: "Refrigerante de Guaraná (2 litros).", category: CATEGORIES.DRINK, basePrice: 7.00, imageUrl: "assets/guarana-2l.jpg" },
-  { id: 7, name: "Brownie de Chocolate", description: "Brownie quente com nozes e cobertura de chocolate.", category: CATEGORIES.DESSERT, basePrice: 8.50, imageUrl: "assets/brownie.jpg" },
-  { id: 8, name: "Petit Gateau", description: "Bolo de chocolate com recheio cremoso e sorvete de baunilha.", category: CATEGORIES.DESSERT, basePrice: 10.90, imageUrl: "assets/petit-gateau.jpg" },
-];
+// MENU_ITEMS agora será carregado do DB
+export let MENU_ITEMS = [];
 
 let renderAppRef = () => console.error("renderApp not initialized");
 let triggerToastRef = () => console.warn("Toast not initialized");
@@ -34,6 +35,82 @@ export const appState = {
   customerData: null, 
   lastOrder: null, 
 };
+
+// --- DATA LAYER ---
+
+export async function initApp() {
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('active', true);
+            
+        if (error) throw error;
+        
+        // Mapeia os campos do DB (snake_case) para o formato do app (camelCase)
+        MENU_ITEMS = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            category: p.category,
+            basePrice: p.base_price,
+            priceModifiers: p.price_modifiers, // JSON no DB
+            imageUrl: p.image_url
+        }));
+
+        console.log("Menu carregado:", MENU_ITEMS.length, "itens");
+        return true;
+    } catch (e) {
+        console.error("Erro ao carregar menu:", e);
+        triggerToastRef("Erro ao conectar com servidor");
+        return false;
+    }
+}
+
+export async function createOrder(orderData) {
+    // Salva o pedido no Supabase
+    const { data, error } = await supabase
+        .from('orders')
+        .insert([{
+            customer_data: orderData.customer,
+            items: orderData.items,
+            total: orderData.total,
+            status: 'PENDING',
+            created_at: new Date()
+        }])
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Erro ao criar pedido:", error);
+        throw error;
+    }
+
+    // Inscreve-se para atualizações em tempo real deste pedido específico (WEBHOOK SIMULADO NO FRONT)
+    subscribeToOrderUpdates(data.id);
+    
+    return data;
+}
+
+function subscribeToOrderUpdates(orderId) {
+    supabase
+        .channel(`order-${orderId}`)
+        .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
+            (payload) => {
+                if (payload.new.status === 'PAID') {
+                    triggerToastRef("Pagamento confirmado! Iniciando preparo.");
+                    // Aqui você poderia forçar uma atualização da UI se estivesse na tela de tracking
+                    if(appState.lastOrder) {
+                        appState.lastOrder.status = 'PAID';
+                        // Notificar componente de tracking se necessário
+                    }
+                }
+            }
+        )
+        .subscribe();
+}
 
 export function navigate(view) {
   appState.currentView = view;
@@ -51,19 +128,21 @@ export function setCustomerData(data) {
 }
 
 export function confirmOrder(total) {
+    // O pedido real é criado dentro do fluxo de pagamento agora, 
+    // mas mantemos o estado local para UI imediata
     appState.lastOrder = {
         customer: { ...appState.customerData },
         items: [...CartStore.items],
         total: total,
         date: new Date(),
-        status: 'RECEIVED' 
+        status: 'PENDING' 
     };
     CartStore.clearCart();
 }
 
 export function saveUserProfile(data) {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data));
-    triggerToastRef("Perfil salvo com sucesso!");
+    triggerToastRef("Perfil salvo localmente!");
 }
 
 export function getUserProfile() {
