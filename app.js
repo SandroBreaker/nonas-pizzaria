@@ -23,6 +23,9 @@ export function renderApp(onlyCartUpdate = false) {
   
   let newContent;
   switch (State.appState.currentView) {
+    case State.APP_VIEWS.LOGIN: // <--- NOVO
+      newContent = renderLogin();
+      break;
     case State.APP_VIEWS.CHECKOUT:
       newContent = renderCustomerForm('CHECKOUT');
       break;
@@ -49,6 +52,7 @@ export function renderApp(onlyCartUpdate = false) {
   const categoryNav = document.getElementById('category-nav-container');
   const promoBar = document.querySelector('.promo-bar');
   
+  // Esconde barras de navegação se não for o Menu
   if (State.appState.currentView === State.APP_VIEWS.MENU) {
       if(categoryNav) categoryNav.classList.remove('hidden');
       if(promoBar) promoBar.classList.remove('hidden');
@@ -95,20 +99,117 @@ function renderFooter() {
 
 // --- III. VIEW ROUTERS & RENDERERS ---
 
+// NOVA FUNÇÃO: TELA DE LOGIN UNIFICADA
+function renderLogin() {
+    const container = document.createElement('div');
+    container.className = "form-container animate-in";
+    
+    // Estado local para controlar a aba
+    let activeTab = 'CLIENT'; 
+
+    const renderContent = () => {
+        container.innerHTML = `
+            <div class="form-card" style="max-width: 500px; margin: 0 auto;">
+                <h2 class="text-2xl font-serif font-bold text-center mb-6">Acesse sua Conta</h2>
+                
+                <div class="login-toggle-container">
+                    <button class="toggle-btn ${activeTab === 'CLIENT' ? 'active' : ''}" id="tab-client">
+                        Cliente
+                    </button>
+                    <button class="toggle-btn ${activeTab === 'ADMIN' ? 'active' : ''}" id="tab-admin">
+                        Admin
+                    </button>
+                </div>
+
+                <div id="client-view" class="${activeTab === 'CLIENT' ? '' : 'hidden'}">
+                    <p class="text-center text-stone-500 mb-4 text-sm">
+                        Preencha seus dados para agilizar seus pedidos.
+                    </p>
+                    <div id="client-form-wrapper"></div>
+                </div>
+
+                <div id="admin-view" class="${activeTab === 'ADMIN' ? '' : 'hidden'} animate-in">
+                    <div class="admin-login-box">
+                        <div class="admin-icon-box">
+                            ${Utils.getIcon('User', 'icon-32')}
+                        </div>
+                        <form id="admin-form" class="flex flex-col gap-4">
+                            <div class="input-group text-left">
+                                <label>Usuário</label>
+                                <input type="text" id="admin-user" class="input-field" placeholder="admin">
+                            </div>
+                            <div class="input-group text-left">
+                                <label>Senha</label>
+                                <input type="password" id="admin-pass" class="input-field" placeholder="••••••">
+                            </div>
+                            <button type="submit" class="btn-primary btn-full mt-4">
+                                Entrar no Painel
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Listeners das Abas
+        container.querySelector('#tab-client').addEventListener('click', () => { activeTab = 'CLIENT'; renderContent(); });
+        container.querySelector('#tab-admin').addEventListener('click', () => { activeTab = 'ADMIN'; renderContent(); });
+
+        // Lógica da Aba CLIENTE
+        if(activeTab === 'CLIENT') {
+            const wrapper = container.querySelector('#client-form-wrapper');
+            // Reutiliza o formulário existente, mas limpa o estilo de "card" para encaixar melhor
+            const formElement = renderCustomerForm('PROFILE');
+            const innerCard = formElement.querySelector('.form-card');
+            
+            if(innerCard) {
+                // Remove título interno duplicado
+                const header = innerCard.querySelector('.form-header');
+                if(header) header.remove();
+                
+                // Remove sombra e padding extra
+                innerCard.style.boxShadow = 'none';
+                innerCard.style.padding = '0';
+                wrapper.appendChild(innerCard);
+            } else {
+                wrapper.appendChild(formElement);
+            }
+        }
+
+        // Lógica da Aba ADMIN
+        if(activeTab === 'ADMIN') {
+            container.querySelector('#admin-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const user = document.getElementById('admin-user').value;
+                const pass = document.getElementById('admin-pass').value;
+
+                if (user === 'admin' && pass === 'admin') {
+                    showToast("Login autorizado!");
+                    setTimeout(() => {
+                        window.location.href = 'admin.html';
+                    }, 500);
+                } else {
+                    showToast("Usuário ou senha incorretos", 'error');
+                    const btn = e.target.querySelector('button');
+                    btn.classList.add('animate-shake');
+                    setTimeout(() => btn.classList.remove('animate-shake'), 500);
+                }
+            });
+        }
+    };
+
+    renderContent();
+    return container;
+}
+
 function renderProfileRouter() {
     if (State.appState.lastOrder) {
         return Tracking.renderProfileView();
     }
     
-    const container = document.createElement('div');
-    container.innerHTML = `
-        <div class="profile-header-simple">
-            <h2 class="text-2xl font-serif font-bold">Meu Perfil</h2>
-            <p class="text-sm text-stone-500">Mantenha seus dados atualizados para agilizar seus pedidos.</p>
-        </div>
-    `;
-    container.appendChild(renderCustomerForm('PROFILE'));
-    return container;
+    // Se não tiver pedido, mostra o tracking vazio ou redireciona pro login/cadastro
+    // Neste caso, vamos mostrar a tela de login/cadastro focada em cliente
+    return renderLogin(); 
 }
 
 function renderCustomerForm(mode = 'CHECKOUT') {
@@ -212,6 +313,7 @@ function renderCustomerForm(mode = 'CHECKOUT') {
 
             if (Object.keys(errors).length === 0) {
                 State.saveUserProfile(formData);
+                showToast("Dados salvos com sucesso!");
 
                 if (isCheckout) {
                     State.setCustomerData(formData);
@@ -389,7 +491,6 @@ function renderMenu() {
           menuSection.appendChild(sectionTitle);
           menuSection.appendChild(grid);
       } else {
-          // Empty state para categoria
           menuSection.innerHTML = `<div class="text-center py-8 text-stone-500">Nenhum produto nesta categoria.</div>`;
       }
   }
@@ -517,7 +618,7 @@ function renderPixPayment() {
         }
 
         try {
-            // 1. Cria Pedido no Banco de Dados PRIMEIRO para ter o ID
+            // 1. Cria Pedido no Banco de Dados (Supabase)
             let orderId = State.appState.lastOrder ? State.appState.lastOrder.id : null;
             
             if(!orderId) {
@@ -527,7 +628,7 @@ function renderPixPayment() {
                     total: currentTotal
                 });
                 
-                // Atualiza estado e limpa carrinho
+                // Atualiza estado local
                 State.confirmOrder(currentTotal, dbOrder.id);
                 orderId = dbOrder.id;
             }
@@ -558,8 +659,6 @@ function renderPixPayment() {
                     "tangible": true,
                     "operation_type": 1 
                 }],
-                // Importante: Passamos o ID do banco como referência externa se a API suportar,
-                // ou usamos para conciliação no Webhook
                 "external_reference": orderId,
                 "expire_in_days": 1
             };
@@ -580,6 +679,8 @@ function renderPixPayment() {
 
     return container;
 }
+
+// --- IV. HELPERS & INITIALIZATION ---
 
 let countdownInterval;
 function startCountdown() {
@@ -658,13 +759,19 @@ function updateHeaderUI() {
     renderCategoryNav();
 }
 
-function showToast(message) {
+function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if(!container) return;
     
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `${Utils.getIcon('Check', 'icon-16 text-green')} ${message}`;
+    // Se for erro, pinta de vermelho, senão verde
+    if (type === 'error') {
+        toast.style.borderLeft = '4px solid var(--color-error)';
+        toast.innerHTML = `${Utils.getIcon('XCircle', 'icon-16 text-red')} ${message}`;
+    } else {
+        toast.innerHTML = `${Utils.getIcon('Check', 'icon-16 text-green')} ${message}`;
+    }
     
     container.appendChild(toast);
     setTimeout(() => {
@@ -773,12 +880,12 @@ function updateCartUI() {
     }
 }
 
+// --- INITIALIZATION ---
+
 document.addEventListener('DOMContentLoaded', async () => {
-    
     State.initRenderAppRef(renderApp, showToast);
     
-    // --- LÓGICA DE INICIALIZAÇÃO ASSÍNCRONA ---
-    // Aguarda carregar produtos do banco antes de liberar o app
+    // Inicialização Assíncrona do Banco de Dados
     await State.initApp();
     
     // Remove o loader
@@ -790,10 +897,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     startCountdown();
     startSalesPop();
 
-    // Event Listeners UI
+    // --- EVENT LISTENERS GLOBAIS ---
+    
     document.getElementById('nav-to-menu-logo').addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
     const navBtn = document.getElementById('nav-to-menu-btn');
     if(navBtn) navBtn.addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
+    
+    // Novo listener para o botão de Login
+    const loginBtn = document.getElementById('login-nav-btn');
+    if(loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            State.navigate(State.APP_VIEWS.LOGIN);
+        });
+    }
     
     document.getElementById('open-cart-btn').addEventListener('click', () => {
         State.CartStore.isCartOpen = true;
@@ -814,17 +930,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(checkoutBtn) {
         checkoutBtn.addEventListener('click', () => {
             State.CartStore.isCartOpen = false;
+            
             const savedProfile = State.getUserProfile();
-            // Validação simples
-            const isProfileComplete = savedProfile && savedProfile.fullName && savedProfile.cpf && savedProfile.address && savedProfile.address.street;
+            const isProfileComplete = savedProfile && 
+                                      savedProfile.fullName && 
+                                      savedProfile.phone && 
+                                      savedProfile.cpf && 
+                                      savedProfile.address &&
+                                      savedProfile.address.street;
+
             if (isProfileComplete) {
                 State.setCustomerData(savedProfile);
-                State.navigate(State.APP_VIEWS.SUCCESS);
-            } else {
-                State.navigate(State.APP_VIEWS.CHECKOUT);
-            }
-        });
-    }
-
-    renderApp();
-});
+                State.navigate(State.APP_VIEWS.
