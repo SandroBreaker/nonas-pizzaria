@@ -14,8 +14,15 @@ export function renderApp(onlyCartUpdate = false) {
   
   const mainContent = document.getElementById('main-content');
   
-  // Se ainda estiver carregando (MENU_ITEMS vazio) e estiver no menu, espera
+  // PROTEÇÃO: Se não houver itens, mostra mensagem em vez de tela branca
   if (State.MENU_ITEMS.length === 0 && State.appState.currentView === State.APP_VIEWS.MENU) {
+      mainContent.innerHTML = `
+        <div class="empty-state">
+            <i class="fa-solid fa-pizza-slice icon-64 text-muted"></i>
+            <p>Nenhum produto encontrado.</p>
+            <p class="text-sm">Verifique sua conexão ou o cadastro no Admin.</p>
+        </div>
+      `;
       return; 
   }
 
@@ -23,7 +30,7 @@ export function renderApp(onlyCartUpdate = false) {
   
   let newContent;
   switch (State.appState.currentView) {
-    case State.APP_VIEWS.LOGIN: // <--- NOVO
+    case State.APP_VIEWS.LOGIN:
       newContent = renderLogin();
       break;
     case State.APP_VIEWS.CHECKOUT:
@@ -99,12 +106,10 @@ function renderFooter() {
 
 // --- III. VIEW ROUTERS & RENDERERS ---
 
-// NOVA FUNÇÃO: TELA DE LOGIN UNIFICADA
 function renderLogin() {
     const container = document.createElement('div');
     container.className = "form-container animate-in";
     
-    // Estado local para controlar a aba
     let activeTab = 'CLIENT'; 
 
     const renderContent = () => {
@@ -151,23 +156,17 @@ function renderLogin() {
             </div>
         `;
 
-        // Listeners das Abas
         container.querySelector('#tab-client').addEventListener('click', () => { activeTab = 'CLIENT'; renderContent(); });
         container.querySelector('#tab-admin').addEventListener('click', () => { activeTab = 'ADMIN'; renderContent(); });
 
-        // Lógica da Aba CLIENTE
         if(activeTab === 'CLIENT') {
             const wrapper = container.querySelector('#client-form-wrapper');
-            // Reutiliza o formulário existente, mas limpa o estilo de "card" para encaixar melhor
             const formElement = renderCustomerForm('PROFILE');
             const innerCard = formElement.querySelector('.form-card');
             
             if(innerCard) {
-                // Remove título interno duplicado
                 const header = innerCard.querySelector('.form-header');
                 if(header) header.remove();
-                
-                // Remove sombra e padding extra
                 innerCard.style.boxShadow = 'none';
                 innerCard.style.padding = '0';
                 wrapper.appendChild(innerCard);
@@ -176,7 +175,6 @@ function renderLogin() {
             }
         }
 
-        // Lógica da Aba ADMIN
         if(activeTab === 'ADMIN') {
             container.querySelector('#admin-form').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -206,9 +204,6 @@ function renderProfileRouter() {
     if (State.appState.lastOrder) {
         return Tracking.renderProfileView();
     }
-    
-    // Se não tiver pedido, mostra o tracking vazio ou redireciona pro login/cadastro
-    // Neste caso, vamos mostrar a tela de login/cadastro focada em cliente
     return renderLogin(); 
 }
 
@@ -941,4 +936,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (isProfileComplete) {
                 State.setCustomerData(savedProfile);
-                State.navigate(State.APP_VIEWS.
+                State.navigate(State.APP_VIEWS.SUCCESS);
+            } else {
+                State.navigate(State.APP_VIEWS.CHECKOUT);
+            }
+        });
+    }
+
+    renderApp();
+});
