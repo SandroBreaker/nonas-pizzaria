@@ -2,8 +2,8 @@
 import * as Utils from './utils.js';
 
 // --- CONFIGURAÇÃO SUPABASE ---
-const SUPABASE_URL = 'SUA_URL_SUPABASE_AQUI'; 
-const SUPABASE_KEY = 'SUA_KEY_ANON_AQUI';
+const SUPABASE_URL = 'https://qvkfoitbatyrwqbicwwc.supabase.co'; 
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2a2ZvaXRiYXR5cndxYmljd3djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NjE5NjMsImV4cCI6MjA3OTIzNzk2M30.YzaC8z3e3ut6FFiNsr4e-NJtcVQvvLX-QuOKtjd78YM';
 
 // Inicializa o cliente usando a versão global carregada no HTML
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
