@@ -2,10 +2,10 @@
 import * as Utils from './utils.js';
 
 // --- CONFIGURAÇÃO SUPABASE ---
-// Substitua pelas suas credenciais do painel do Supabase
 const SUPABASE_URL = 'SUA_URL_SUPABASE_AQUI'; 
 const SUPABASE_KEY = 'SUA_KEY_ANON_AQUI';
 
+// Inicializa o cliente usando a versão global carregada no HTML
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export const PIZZA_SIZES = { M: 'M', G: 'G', F: 'F' };
@@ -18,7 +18,7 @@ export const OFFER_HASH_DEFAULT = "png8aj6v6p";
 export const CART_STORAGE_KEY = 'nona-pizzeria-cart-v1';
 export const USER_STORAGE_KEY = 'nona-pizzeria-user-v1';
 
-// MENU_ITEMS agora será carregado do DB
+// MENU_ITEMS agora começa vazio e é preenchido pelo banco
 export let MENU_ITEMS = [];
 
 let renderAppRef = () => console.error("renderApp not initialized");
@@ -36,7 +36,7 @@ export const appState = {
   lastOrder: null, 
 };
 
-// --- DATA LAYER ---
+// --- DATA LAYER (SUPABASE) ---
 
 export async function initApp() {
     try {
@@ -47,14 +47,14 @@ export async function initApp() {
             
         if (error) throw error;
         
-        // Mapeia os campos do DB (snake_case) para o formato do app (camelCase)
+        // Converte snake_case (banco) para camelCase (app)
         MENU_ITEMS = data.map(p => ({
             id: p.id,
             name: p.name,
             description: p.description,
             category: p.category,
             basePrice: p.base_price,
-            priceModifiers: p.price_modifiers, // JSON no DB
+            priceModifiers: p.price_modifiers,
             imageUrl: p.image_url
         }));
 
@@ -62,13 +62,13 @@ export async function initApp() {
         return true;
     } catch (e) {
         console.error("Erro ao carregar menu:", e);
-        triggerToastRef("Erro ao conectar com servidor");
+        // Fallback silencioso ou alerta
         return false;
     }
 }
 
 export async function createOrder(orderData) {
-    // Salva o pedido no Supabase
+    // 1. Salva no Supabase
     const { data, error } = await supabase
         .from('orders')
         .insert([{
@@ -82,11 +82,11 @@ export async function createOrder(orderData) {
         .single();
 
     if (error) {
-        console.error("Erro ao criar pedido:", error);
+        console.error("Erro DB:", error);
         throw error;
     }
 
-    // Inscreve-se para atualizações em tempo real deste pedido específico (WEBHOOK SIMULADO NO FRONT)
+    // 2. Inicia escuta em tempo real para este pedido
     subscribeToOrderUpdates(data.id);
     
     return data;
@@ -101,16 +101,18 @@ function subscribeToOrderUpdates(orderId) {
             (payload) => {
                 if (payload.new.status === 'PAID') {
                     triggerToastRef("Pagamento confirmado! Iniciando preparo.");
-                    // Aqui você poderia forçar uma atualização da UI se estivesse na tela de tracking
                     if(appState.lastOrder) {
                         appState.lastOrder.status = 'PAID';
-                        // Notificar componente de tracking se necessário
+                        // Força atualização se estiver na tela de tracking
+                        if(appState.currentView === APP_VIEWS.PROFILE) renderAppRef();
                     }
                 }
             }
         )
         .subscribe();
 }
+
+// --- LOGIC ---
 
 export function navigate(view) {
   appState.currentView = view;
@@ -127,10 +129,9 @@ export function setCustomerData(data) {
     appState.customerData = data;
 }
 
-export function confirmOrder(total) {
-    // O pedido real é criado dentro do fluxo de pagamento agora, 
-    // mas mantemos o estado local para UI imediata
+export function confirmOrder(total, dbId = null) {
     appState.lastOrder = {
+        id: dbId,
         customer: { ...appState.customerData },
         items: [...CartStore.items],
         total: total,
@@ -142,7 +143,7 @@ export function confirmOrder(total) {
 
 export function saveUserProfile(data) {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data));
-    triggerToastRef("Perfil salvo localmente!");
+    triggerToastRef("Perfil salvo com sucesso!");
 }
 
 export function getUserProfile() {
