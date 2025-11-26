@@ -2,7 +2,6 @@
 import * as State from './state.js';
 import * as Utils from './utils.js';
 import * as Tracking from './tracking.js';
-import { seedProducts } from './product_seeder.js';
 
 // --- I. CORE CONTROLLER LOGIC ---
 
@@ -776,7 +775,6 @@ function updateCartUI() {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-    await seedProducts();
     
     State.initRenderAppRef(renderApp, showToast);
     
