@@ -13,7 +13,7 @@ export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 export const PIZZA_SIZES = { M: 'M', G: 'G', F: 'F' };
 export const CATEGORIES = { PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES' };
-export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE', FAQ: 'FAQ', CONTACT: 'CONTACT' };
+export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE', FAQ: 'FAQ', CONTACT: 'CONTACT', LOGIN: 'LOGIN'};
 
 export const API_INVICTUS_TOKEN = "wsxiP0Dydmf2TWqjOn1iZk9CfqwxdZBg8w5eQVaTLDWHnTjyvuGAqPBkAiGU";
 export const API_INVICTUS_ENDPOINT = "https://api.invictuspay.app.br/api";
