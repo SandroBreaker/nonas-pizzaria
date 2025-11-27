@@ -1,4 +1,4 @@
-// tracking.js
+
 import * as Utils from './utils.js';
 import * as State from './state.js';
 
@@ -20,6 +20,7 @@ export function renderProfileView() {
     container.className = "profile-container animate-in";
 
     if (!order || !customer) {
+        // Se chamado diretamente sem pedido, mostra estado vazio
         container.innerHTML = `
             <div class="empty-state">
                 ${Utils.getIcon('User', 'icon-64 text-muted')}
@@ -33,17 +34,10 @@ export function renderProfileView() {
         return container;
     }
 
-    container.innerHTML = `
-        <div class="profile-header">
-            <div class="user-info">
-                <div class="avatar-circle">${customer.fullName.charAt(0)}</div>
-                <div>
-                    <h2 class="text-xl font-bold">${customer.fullName}</h2>
-                    <p class="text-sm text-stone-500">${customer.phone}</p>
-                </div>
-            </div>
-        </div>
+    const hasProof = customer.paymentProof ? true : false;
+    const isPending = order.status === 'PENDING';
 
+    container.innerHTML = `
         <div class="tracking-card">
             <h3 class="card-title mb-4">Acompanhar Pedido</h3>
             
@@ -67,6 +61,36 @@ export function renderProfileView() {
                     </p>
                 </div>
             </div>
+
+            <!-- PAYMENT PROOF SECTION -->
+            ${isPending ? `
+            <div id="proof-section" class="mt-6 pt-4 border-t border-dashed border-gray-200">
+                ${hasProof ? `
+                    <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg flex items-center gap-3">
+                        ${Utils.getIcon('FileText', 'icon-24 text-blue-500')}
+                        <div class="flex-1">
+                            <p class="text-sm font-bold text-blue-800">Comprovante Enviado</p>
+                            <p class="text-xs text-blue-600">Aguardando validação do atendente.</p>
+                        </div>
+                        ${Utils.getIcon('Check', 'icon-20 text-blue-500')}
+                    </div>
+                ` : `
+                    <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-lg">
+                        <div class="flex items-start gap-3 mb-3">
+                            ${Utils.getIcon('TriangleAlert', 'icon-20 text-yellow-600')}
+                            <div>
+                                <p class="text-sm font-bold text-yellow-800">Pagamento não identificado?</p>
+                                <p class="text-xs text-yellow-700">Se você já fez o PIX, anexe o comprovante abaixo para agilizar.</p>
+                            </div>
+                        </div>
+                        <input type="file" id="proof-upload-input" accept="image/*" class="hidden">
+                        <button id="btn-upload-proof" class="w-full bg-white border border-yellow-300 text-yellow-800 hover:bg-yellow-100 font-bold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
+                            ${Utils.getIcon('Upload', 'icon-14')} Enviar Comprovante
+                        </button>
+                    </div>
+                `}
+            </div>
+            ` : ''}
             
             <div id="accident-alert" class="accident-box hidden">
                 ${Utils.getIcon('TriangleAlert', 'icon-24 text-red')}
@@ -103,6 +127,44 @@ export function renderProfileView() {
              </div>
         </div>
     `;
+
+    // Logic for Proof Upload
+    if (isPending && !hasProof) {
+        const btn = container.querySelector('#btn-upload-proof');
+        const input = container.querySelector('#proof-upload-input');
+        
+        btn.addEventListener('click', () => input.click());
+        
+        input.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            
+            btn.innerHTML = `${Utils.getIcon('LoaderCircle', 'fa-spin')} Enviando...`;
+            btn.disabled = true;
+
+            try {
+                // Comprime e converte para base64
+                const base64 = await Utils.compressImage(file);
+                
+                // Envia para o estado/banco
+                const res = await State.submitPaymentProof(order.id, base64);
+                
+                if(res.success) {
+                    State.triggerToastRef("Comprovante enviado!");
+                    State.navigate(State.APP_VIEWS.PROFILE); // Reload view
+                } else {
+                    alert("Erro ao enviar: " + res.message);
+                    btn.innerHTML = 'Tentar Novamente';
+                    btn.disabled = false;
+                }
+            } catch(err) {
+                console.error(err);
+                alert("Erro ao processar imagem.");
+                btn.innerHTML = 'Tentar Novamente';
+                btn.disabled = false;
+            }
+        });
+    }
 
     startTrackingLogic(container);
 

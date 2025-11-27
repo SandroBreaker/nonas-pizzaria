@@ -3,113 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nona's Admin - Gerenciador</title>
+    <title>Nona's Admin ERP</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="admin.css"> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="admin.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <header class="admin-header">
-        <div class="container header-content">
-            <div class="logo-btn">
-                <div class="logo-icon-wrapper" style="background: #1c1917;">
-                    <i class="fa-solid fa-lock icon-24 text-white"></i>
+    <!-- Botão Mobile Toggle -->
+    <button id="mobile-menu-btn" class="mobile-only">
+        <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+
+    <div class="admin-layout">
+        <aside id="admin-sidebar" class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <i class="fa-solid fa-pizza-slice text-primary text-xl"></i>
+                    <span class="font-bold text-xl">Nona's Admin</span>
                 </div>
-                <span class="logo-text">Painel <span>Admin</span></span>
-            </div>
-            <a href="index.html" class="btn-ghost">Voltar ao Site</a>
-        </div>
-    </header>
-
-    <main class="container app-main">
-        
-        <section class="tutorial-box animate-in">
-            <div class="tutorial-header">
-                <i class="fa-solid fa-graduation-cap text-primary"></i>
-                <h3>Central de Aprendizado Supabase</h3>
-            </div>
-            <div class="tutorial-controls">
-                <label>O que você quer aprender a fazer?</label>
-                <select id="tutorial-select" class="input-field">
-                    <option value="intro">Selecione uma operação...</option>
-                    <option value="select">Ler Dados (SELECT)</option>
-                    <option value="insert">Criar Produto (INSERT)</option>
-                    <option value="update">Atualizar Produto (UPDATE)</option>
-                    <option value="delete">Deletar Produto (DELETE)</option>
-                </select>
-            </div>
-            <div id="tutorial-display" class="code-block hidden">
-                <p id="tutorial-desc" class="text-sm text-muted mb-2"></p>
-                <pre><code id="tutorial-code"></code></pre>
-            </div>
-        </section>
-
-        <hr class="divider">
-
-        <div class="admin-grid">
-            <div class="form-card">
-                <h3 class="form-section-title">
-                    <i class="fa-solid fa-pizza-slice text-primary"></i> 
-                    <span id="form-title">Novo Produto</span>
-                </h3>
                 
-                <form id="product-form" class="admin-form">
-                    <input type="hidden" id="prod-id">
-                    
-                    <div class="input-group">
-                        <label>Nome do Produto</label>
-                        <input type="text" id="prod-name" class="input-field" required placeholder="Ex: Pizza Calabresa">
-                    </div>
-
-                    <div class="input-group">
-                        <label>Categoria</label>
-                        <select id="prod-category" class="input-field">
-                            <option value="PIZZA">Pizza</option>
-                            <option value="BEBIDA">Bebida</option>
-                            <option value="SOBREMESA">Sobremesa</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Preço Base (R$)</label>
-                        <input type="number" step="0.01" id="prod-price" class="input-field" required placeholder="0.00">
-                    </div>
-
-                    <div class="input-group">
-                        <label>Descrição</label>
-                        <textarea id="prod-desc" class="input-field" rows="3"></textarea>
-                    </div>
-
-                    <div class="input-group">
-                        <label>URL da Imagem</label>
-                        <input type="text" id="prod-img" class="input-field" placeholder="assets/...">
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" id="btn-cancel" class="btn-ghost hidden">Cancelar</button>
-                        <button type="submit" class="btn-primary btn-full">Salvar Produto</button>
-                    </div>
-                </form>
+                <a href="index.html" class="btn-back-site">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar ao Site
+                </a>
             </div>
+            
+            <nav id="sidebar-nav" class="sidebar-nav">
+                <button class="nav-item active" data-tab="orders">
+                    <i class="fa-solid fa-list-check"></i> Pedidos
+                </button>
+                <button class="nav-item" data-tab="products">
+                    <i class="fa-solid fa-utensils"></i> Cardápio
+                </button>
+                <button class="nav-item" data-tab="customers">
+                    <i class="fa-solid fa-users"></i> Clientes
+                </button>
+                <button class="nav-item" data-tab="config">
+                    <i class="fa-solid fa-store"></i> Configurações
+                </button>
+            </nav>
+        </aside>
 
-            <div class="list-card">
-                <div class="list-header">
-                    <h3>Produtos Cadastrados</h3>
-                    <button id="btn-refresh" class="btn-icon"><i class="fa-solid fa-rotate-right"></i></button>
+        <main class="admin-content">
+            
+            <!-- VIEW PEDIDOS -->
+            <section id="view-orders" class="admin-view">
+                <div class="view-header">
+                    <h2>Gerenciamento de Pedidos</h2>
+                    <button id="refresh-orders" class="btn-icon"><i class="fa-solid fa-rotate"></i></button>
                 </div>
-                <div id="admin-product-list" class="product-list-scroll">
-                    <div class="text-center py-8"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                <div class="kanban-board">
+                    <div class="kanban-column">
+                        <h3>Pendentes / Pagos</h3>
+                        <div id="list-pending" class="flex flex-col gap-3"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <h3>Em Preparo / Entrega</h3>
+                        <div id="list-active" class="flex flex-col gap-3"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <h3>Concluídos</h3>
+                        <div id="list-completed" class="flex flex-col gap-3"></div>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </section>
 
-    </main>
+            <!-- VIEW PRODUTOS -->
+            <section id="view-products" class="admin-view hidden">
+                <div class="view-header">
+                    <h2>Catálogo de Produtos</h2>
+                </div>
+                
+                <div class="products-layout">
+                    <!-- Form de Cadastro -->
+                    <div class="form-card">
+                        <h3 class="form-section-title mb-4"><i class="fa-solid fa-plus text-primary"></i> <span id="form-title">Novo Produto</span></h3>
+                        <form id="product-form" class="admin-form">
+                            <input type="hidden" id="prod-id">
+                            <div class="form-row">
+                                <div class="input-group flex-[2]">
+                                    <label>Nome</label>
+                                    <input type="text" id="prod-name" class="input-field" required>
+                                </div>
+                                <div class="input-group flex-1">
+                                    <label>Categoria</label>
+                                    <select id="prod-category" class="input-field">
+                                        <option value="PIZZA">Pizza</option>
+                                        <option value="BEBIDA">Bebida</option>
+                                        <option value="SOBREMESA">Sobremesa</option>
+                                    </select>
+                                </div>
+                                <div class="input-group flex-1">
+                                    <label>Preço</label>
+                                    <input type="number" step="0.01" id="prod-price" class="input-field" required>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>Descrição</label>
+                                <textarea id="prod-desc" class="input-field" rows="2"></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>Imagem URL</label>
+                                <input type="text" id="prod-img" class="input-field">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" id="btn-cancel" class="btn-ghost hidden">Cancelar</button>
+                                <button type="submit" class="btn-primary flex-1">Salvar Produto</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Lista de Produtos (Tabela) -->
+                    <div class="list-card">
+                        <div class="filter-bar">
+                            <input type="text" id="search-product" class="search-input" placeholder="Buscar produto por nome...">
+                        </div>
+                        <div class="product-table-container">
+                            <table class="product-table">
+                                <thead>
+                                    <tr>
+                                        <th width="60">Img</th>
+                                        <th>Nome</th>
+                                        <th>Categoria</th>
+                                        <th>Preço</th>
+                                        <th width="100">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-product-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW CLIENTES -->
+            <section id="view-customers" class="admin-view hidden">
+                <div class="view-header">
+                    <h2>Base de Clientes</h2>
+                    <button class="btn-primary btn-sm" onclick="prepareNewCustomer()"><i class="fa-solid fa-plus"></i> Novo Cliente</button>
+                </div>
+                
+                <div id="customer-form-container" class="form-card mb-6 hidden">
+                    <h3 class="form-section-title"><span id="cust-form-title">Novo Cliente</span></h3>
+                    <form id="customer-form" class="admin-form">
+                        <input type="hidden" id="cust-id">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label>Nome Completo</label>
+                                <input type="text" id="cust-name" class="input-field" required>
+                            </div>
+                            <div class="input-group">
+                                <label>CPF</label>
+                                <input type="text" id="cust-cpf" class="input-field">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label>Email</label>
+                                <input type="email" id="cust-email" class="input-field">
+                            </div>
+                            <div class="input-group">
+                                <label>Telefone</label>
+                                <input type="text" id="cust-phone" class="input-field">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" onclick="closeCustomerForm()" class="btn-ghost">Cancelar</button>
+                            <button type="submit" class="btn-primary">Salvar Cliente</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="list-card">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Contato</th>
+                                    <th>CPF</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customer-list-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW CONFIG -->
+            <section id="view-config" class="admin-view hidden">
+                <div class="form-card max-w-lg mx-auto">
+                    <h3 class="form-section-title mb-4">Configurações da Loja</h3>
+                    <form id="config-form" class="admin-form">
+                        <div class="toggle-group">
+                            <label class="switch">
+                                <input type="checkbox" id="conf-open">
+                                <span class="slider round"></span>
+                            </label>
+                            <span id="store-status-text">Loja Aberta</span>
+                        </div>
+                        <div class="input-group mt-4">
+                            <label>Taxa de Entrega (R$)</label>
+                            <input type="number" step="0.50" id="conf-fee" class="input-field">
+                        </div>
+                        <div class="input-group">
+                            <label>Mensagem da Promoção</label>
+                            <input type="text" id="conf-promo" class="input-field">
+                        </div>
+                        <button type="submit" class="btn-primary btn-full mt-4">Salvar Configurações</button>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
 
     <div id="toast-container" class="toast-container"></div>
-
     <script type="module" src="admin.js"></script>
 </body>
 </html>

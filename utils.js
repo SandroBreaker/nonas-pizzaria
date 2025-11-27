@@ -1,4 +1,5 @@
-// utils.js
+
+
 import { API_INVICTUS_ENDPOINT, API_INVICTUS_TOKEN } from './state.js';
 
 export function getIcon(iconName, className = '') {
@@ -31,13 +32,33 @@ export function getIcon(iconName, className = '') {
     'Question': 'fa-circle-question',
     'Phone': 'fa-phone',
     'Save': 'fa-floppy-disk',
-    'Edit': 'fa-pen-to-square'
+    'Edit': 'fa-pen-to-square',
+    'Upload': 'fa-upload',
+    'FileText': 'fa-file-lines',
+    // New Social Icons
+    'Instagram': 'fa-brands fa-instagram',
+    'Facebook': 'fa-brands fa-facebook',
+    'Whatsapp': 'fa-brands fa-whatsapp'
   };
 
-  const faClass = iconMap[iconName] || 'fa-circle-question'; 
+  // Se o ícone já tiver "fa-brands", não adiciona "fa-solid"
+  const isBrand = iconMap[iconName] && iconMap[iconName].includes('fa-brands');
+  const faClass = iconMap[iconName] || 'fa-solid fa-circle-question'; 
+  
+  // Se for brand, retorna direto, senão prefixa com fa-solid (compatibilidade com lógica anterior)
+  let fullClass = faClass;
+  if (!isBrand && !faClass.includes('fa-')) {
+      fullClass = `fa-solid ${faClass}`;
+  } else if (!isBrand && !faClass.includes('fa-brands')) {
+       // Mantém lógica antiga para os ícones que só retornavam o nome (ex: fa-cart-shopping)
+       // MAS meu iconMap acima já retorna as classes completas em alguns casos novos? 
+       // Vamos simplificar: se no map não tem espaço, assume que é só o sufixo do solid.
+       if(!faClass.includes(' ')) fullClass = `fa-solid ${faClass}`;
+  }
+
   const extraClass = iconName === 'LoaderCircle' ? 'fa-spin' : '';
 
-  return `<i class="fa-solid ${faClass} ${extraClass} ${className}"></i>`;
+  return `<i class="${fullClass} ${extraClass} ${className}"></i>`;
 }
 
 export function formatCurrency(value) {
@@ -111,13 +132,20 @@ export function maskZip(value) {
   return value;
 }
 
+// --- FUNÇÃO DE CEP COM FALLBACK (ROBUSTA) ---
 export async function fetchAddressByZipCode(zipCode) {
     const cleanZip = zipCode.replace(/\D/g, '');
     if (cleanZip.length !== 8) return null;
+
+    // Tentativa 1: ViaCEP
     try {
         const response = await fetch(`https://viacep.com.br/ws/${cleanZip}/json/`);
+        if (!response.ok) throw new Error('ViaCEP error');
+        
         const data = await response.json();
-        return data.erro ? null : {
+        if (data.erro) return null; // CEP não existe
+
+        return {
             street: data.logradouro,
             neighborhood: data.bairro,
             city: data.localidade,
@@ -125,8 +153,25 @@ export async function fetchAddressByZipCode(zipCode) {
             complement: data.complemento 
         };
     } catch (error) {
-        console.error("Erro CEP:", error);
-        return null;
+        console.warn("ViaCEP falhou ou indisponível. Tentando OpenCEP...", error);
+        
+        // Tentativa 2: OpenCEP (Fallback)
+        try {
+            const response2 = await fetch(`https://opencep.com/v1/${cleanZip}`);
+            if (!response2.ok) throw new Error('OpenCEP error');
+
+            const data2 = await response2.json();
+            return {
+                street: data2.logradouro,
+                neighborhood: data2.bairro,
+                city: data2.localidade,
+                state: data2.uf,
+                complement: data2.complemento
+            };
+        } catch (error2) {
+            console.error("Todas as APIs de CEP falharam.", error2);
+            return null;
+        }
     }
 }
 
@@ -157,4 +202,63 @@ export async function executeInvictusApi(payload) {
         console.error("Erro Network:", error);
         return { success: false, error: "Erro de comunicação com o sistema de pagamento. Verifique sua internet." };
     }
+}
+
+// --- NOTIFICAÇÕES (Browser API) ---
+export async function requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    
+    if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+    }
+    return Notification.permission === 'granted';
+}
+
+export function sendSystemNotification(title, body) {
+    if (!('Notification' in window)) return;
+
+    if (Notification.permission === 'granted') {
+        try {
+             new Notification(title, {
+                body: body,
+                icon: 'assets/pizza-icon-32x32.png', // Fallback icon path
+                vibrate: [200, 100, 200]
+            });
+        } catch (e) {
+            console.warn("Notificação falhou:", e);
+        }
+    }
+}
+
+// --- IMAGEM COMPRESSION (Para comprovantes) ---
+export function compressImage(file, maxWidth = 800, quality = 0.6) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Retorna Base64 JPEG comprimido
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
 }

@@ -1,242 +1,184 @@
-/* admin.css */
+/* admin.css - Redesigned & Fixed */
 
-/* --- Layout & Header --- */
-.admin-header {
-    background: #1c1917;
+:root {
+    --sidebar-width: 260px;
+    --header-height: 4rem;
+}
+
+body { background-color: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; }
+
+/* Layout Grid */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar (Fixed/Sticky) */
+.admin-sidebar {
+    width: var(--sidebar-width);
+    background: #0f172a;
     color: white;
-    padding: 1rem 0;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    position: sticky; /* Mantém o header visível */
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
     top: 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+    gap: 2.5rem;
     z-index: 50;
 }
 
-/* --- Tutorial Section (Melhoria Visual) --- */
-.tutorial-box {
-    background: #f8fafc; /* Mais suave que o azul anterior */
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid var(--color-primary); /* Indicador visual forte */
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.sidebar-header {
+    display: flex; flex-direction: column; gap: 1.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #334155;
 }
 
-.tutorial-box:hover {
-    box-shadow: var(--shadow-md);
+.logo-area { display: flex; align-items: center; gap: 0.75rem; }
+
+.btn-back-site {
+    background: #334155; color: #94a3b8;
+    padding: 0.75rem 1rem; border-radius: 6px;
+    font-size: 0.85rem; font-weight: 500;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    text-decoration: none; transition: all 0.2s;
+}
+.btn-back-site:hover { background: #475569; color: white; }
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+
+.nav-item {
+    display: flex; align-items: center; gap: 1rem;
+    width: 100%; padding: 0.85rem 1rem;
+    background: transparent; border: none;
+    color: #94a3b8; cursor: pointer;
+    text-align: left; font-size: 0.95rem; font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s;
 }
 
-.tutorial-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    color: #0f172a;
-    font-weight: 600;
+.nav-item:hover { background: #1e293b; color: white; }
+.nav-item.active { background: var(--color-primary); color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+
+/* Content Area */
+.admin-content { 
+    flex: 1; 
+    padding: 3rem; 
+    overflow-y: auto; 
+    max-height: 100vh;
+    background: #f1f5f9;
 }
 
-.tutorial-controls label {
-    display: block;
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-    margin-bottom: 0.5rem;
+.admin-view {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex; flex-direction: column; gap: 2.5rem;
+    animation: fadeIn 0.3s ease-out;
 }
 
-.tutorial-controls select {
-    width: 100%;
-    max-width: 100%; /* Mobile friendly */
-    padding: 0.6rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background-color: white;
-    cursor: pointer;
-    font-size: 0.95rem;
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-.code-block {
-    background: #0f172a; /* Slate-900 para contraste de código */
-    color: #38bdf8; /* Cyan-400 */
-    padding: 1.25rem;
-    border-radius: var(--radius-md);
-    font-family: 'Fira Code', 'Consolas', monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-top: 1rem;
-    overflow-x: auto;
-    position: relative;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+.view-header { 
+    display: flex; justify-content: space-between; align-items: center; 
+    background: white; padding: 1.5rem 2rem; border-radius: var(--radius-xl);
+    border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm);
 }
+.view-header h2 { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 
-/* --- Layout Grid Principal --- */
-.admin-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
-    align-items: start; /* Impede que o form estique altura desnecessária */
-}
-
-@media(min-width: 1024px) {
-    .admin-grid { 
-        grid-template-columns: 350px 1fr; /* Form fixo, Lista fluida */
-        gap: 2.5rem;
-    } 
-}
-
-/* --- Cards (Container Genérico) --- */
+/* Cards & Containers */
 .form-card, .list-card {
     background: white;
-    padding: 1.5rem;
+    padding: 2rem;
     border-radius: var(--radius-xl);
-    border: 1px solid var(--color-border);
+    border: 1px solid #e2e8f0;
     box-shadow: var(--shadow-sm);
 }
 
-/* --- Formulário Admin --- */
-.admin-form { display: flex; flex-direction: column; gap: 1.25rem; }
-
-.form-section-title {
-    font-size: 1.25rem;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 1rem;
+/* Kanban Orders */
+.kanban-board {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;
 }
 
-/* Melhoria nos Inputs para UX */
-.admin-form .input-field, 
-.admin-form textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: var(--radius-md);
-    transition: all 0.2s;
+.kanban-column {
+    background: #f8fafc; padding: 1.5rem; border-radius: 12px;
+    min-height: 500px; border: 1px solid #e2e8f0;
+    display: flex; flex-direction: column; gap: 1.5rem;
+}
+
+.kanban-column h3 {
+    font-size: 0.85rem; text-transform: uppercase; color: #64748b;
+    font-weight: 700; letter-spacing: 0.05em;
+    padding-bottom: 0.75rem; border-bottom: 2px solid #e2e8f0;
+}
+
+.order-card {
+    background: white; padding: 1.5rem; border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid #cbd5e1;
+    display: flex; flex-direction: column; gap: 0.75rem;
+    transition: transform 0.2s;
+}
+.order-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+
+.order-card.status-PAID { border-left-color: var(--color-success); }
+.order-card.status-PREPARING { border-left-color: #f59e0b; }
+.order-card.status-DELIVERY { border-left-color: #3b82f6; }
+.order-card.status-COMPLETED { border-left-color: #10b981; opacity: 0.8; }
+
+.order-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; }
+.order-customer { font-weight: 700; font-size: 1rem; color: #1e293b; }
+.order-items { font-size: 0.85rem; color: #475569; background: #f1f5f9; padding: 0.75rem; border-radius: 4px; }
+.order-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+.btn-xs { padding: 6px 10px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; border: none; font-weight: 600; transition: background 0.2s; }
+.btn-advance { background: #e0f2fe; color: #0284c7; }
+.btn-advance:hover { background: #0284c7; color: white; }
+
+/* Products Layout (Table Style) */
+.products-layout { display: grid; gap: 2.5rem; }
+
+.filter-bar {
+    display: flex; gap: 1rem; margin-bottom: 1.5rem;
+}
+.search-input {
+    flex: 1; padding: 0.85rem 1rem; border: 1px solid #cbd5e1; border-radius: 8px;
     font-size: 0.95rem;
 }
 
-.admin-form .input-field:focus,
-.admin-form textarea:focus {
-    border-color: var(--color-primary);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(180, 35, 35, 0.15); /* Ring effect */
+.product-table-container {
+    overflow-x: auto;
 }
-
-.admin-form label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #4b5563;
-    margin-bottom: 0.4rem;
-    display: block;
+.product-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.product-table th { 
+    text-align: left; padding: 1.25rem; background: #f8fafc; 
+    color: #64748b; font-weight: 600; font-size: 0.85rem; 
+    border-bottom: 1px solid #e2e8f0;
 }
+.product-table td { padding: 1.25rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.product-table tr:hover td { background: #f8fafc; }
 
-/* --- Lista de Produtos --- */
-.list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
+.prod-thumb { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #eee; }
+.action-cell { display: flex; gap: 0.75rem; }
 
-.product-list-scroll {
-    max-height: 600px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding-right: 0.5rem; /* Espaço para scrollbar */
-}
+/* Form Styles */
+.admin-form { display: flex; flex-direction: column; gap: 1.5rem; }
+.form-row { display: flex; gap: 1.5rem; }
+.input-group { display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
+.input-field { padding: 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; }
 
-/* Scrollbar Customizada (Webkit) */
-.product-list-scroll::-webkit-scrollbar { width: 6px; }
-.product-list-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-.product-list-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-.product-list-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+/* Mobile */
+.mobile-only { display: none; }
 
-/* --- Item da Lista (Card Individual) --- */
-.admin-item {
-    background: white;
-    border: 1px solid var(--color-border);
-    padding: 1rem;
-    border-radius: var(--radius-lg);
-    display: grid;
-    grid-template-columns: 1fr auto; /* Info na esq, Ações na dir */
-    gap: 1rem;
-    align-items: center;
-    transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
-}
-
-.admin-item:hover {
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-    z-index: 1;
-}
-
-.item-info { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 0.25rem; 
-}
-
-.item-name { 
-    font-weight: 700; 
-    color: #1f2937;
-    font-size: 1rem;
-}
-
-.item-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.85rem;
-}
-
-/* Badges (Categoria) */
-.item-cat { 
-    font-size: 0.75rem; 
-    font-weight: 600;
-    background: #f3f4f6; 
-    color: #4b5563;
-    padding: 4px 8px; 
-    border-radius: 99px;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.item-price { 
-    color: var(--color-success); 
-    font-weight: 700; 
-    font-family: monospace; /* Alinha números melhor */
-    font-size: 0.95rem; 
-}
-
-/* Ações (Botões) */
-.item-actions { display: flex; gap: 0.75rem; }
-
-.item-actions button {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-edit { background: #eff6ff; color: #3b82f6; }
-.btn-edit:hover { background: #3b82f6; color: white; }
-
-.btn-delete { background: #fef2f2; color: #ef4444; }
-.btn-delete:hover { background: #ef4444; color: white; }
-
-/* Empty State para Lista */
-.empty-list {
-    text-align: center;
-    padding: 2rem;
-    color: var(--color-text-muted);
-    font-style: italic;
+@media(max-width: 1024px) {
+    .kanban-board { grid-template-columns: 1fr; }
+    .admin-sidebar { 
+        position: fixed; left: -280px; transition: left 0.3s;
+        height: 100vh; z-index: 100;
+    }
+    .admin-sidebar.open { left: 0; }
+    
+    .mobile-only { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 101; background: #0f172a; color: white; padding: 0.5rem; border-radius: 6px; border: none; }
+    .admin-content { padding: 1rem; padding-top: 4rem; }
 }

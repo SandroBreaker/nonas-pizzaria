@@ -1,176 +1,370 @@
-// state.js
+
+
 import * as Utils from './utils.js';
 
-// state.js
-// ... imports ...
-
-// Garanta que NÃO tem espaços dentro das aspas!
+// --- CONFIGURAÇÃO SUPABASE ---
 const SUPABASE_URL = 'https://qvkfoitbatyrwqbicwwc.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2a2ZvaXRiYXR5cndxYmljd3djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NjE5NjMsImV4cCI6MjA3OTIzNzk2M30.YzaC8z3e3ut6FFiNsr4e-NJtcVQvvLX-QuOKtjd78YM';
 
-// ... resto do arquivo// Inicializa o cliente usando a versão global carregada no HTML
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// --- CONSTANTES ---
 export const PIZZA_SIZES = { M: 'M', G: 'G', F: 'F' };
-export const CATEGORIES = { PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA', REVIEW: 'AVALIAÇÕES' };
-export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE', FAQ: 'FAQ', CONTACT: 'CONTACT', LOGIN: 'LOGIN'};
+// REMOVIDO 'REVIEW' DAQUI PARA NÃO APARECER NO SCROLL DE CATEGORIAS
+export const CATEGORIES = { PIZZA: 'PIZZA', DRINK: 'BEBIDA', DESSERT: 'SOBREMESA' }; 
+export const APP_VIEWS = { MENU: 'MENU', CHECKOUT: 'CHECKOUT', SUCCESS: 'SUCCESS', PROFILE: 'PROFILE', FAQ: 'FAQ', CONTACT: 'CONTACT', LOGIN: 'LOGIN' };
 
 export const API_INVICTUS_TOKEN = "wsxiP0Dydmf2TWqjOn1iZk9CfqwxdZBg8w5eQVaTLDWHnTjyvuGAqPBkAiGU";
 export const API_INVICTUS_ENDPOINT = "https://api.invictuspay.app.br/api";
 export const OFFER_HASH_DEFAULT = "png8aj6v6p"; 
 export const CART_STORAGE_KEY = 'nona-pizzeria-cart-v1';
 export const USER_STORAGE_KEY = 'nona-pizzeria-user-v1';
+export const LAST_ORDER_KEY = 'nona-pizzeria-last-order-v1';
 
-// MENU_ITEMS agora começa vazio e é preenchido pelo banco
+// --- ESTADO GLOBAL ---
 export let MENU_ITEMS = [];
-
-let renderAppRef = () => console.error("renderApp not initialized");
-let triggerToastRef = () => console.warn("Toast not initialized");
-
-export function initRenderAppRef(renderFn, toastFn) {
-  renderAppRef = renderFn;
-  if(toastFn) triggerToastRef = toastFn;
-}
 
 export const appState = {
   currentView: APP_VIEWS.MENU,
   selectedCategory: CATEGORIES.PIZZA,
-  customerData: null, 
-  lastOrder: null, 
+  lastOrder: null,
+  customerData: null // Dados do cliente logado
 };
 
-// --- DATA LAYER (SUPABASE) ---
+// Variável para gerenciar a inscrição do Realtime
+let orderSubscription = null;
 
-export async function initApp() {
-    try {
-        const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .eq('active', true);
-            
-        if (error) throw error;
-        
-        // Converte snake_case (banco) para camelCase (app)
-        MENU_ITEMS = data.map(p => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            category: p.category,
-            basePrice: p.base_price,
-            priceModifiers: p.price_modifiers,
-            imageUrl: p.image_url
-        }));
+// Referências para callbacks (UI)
+let _renderAppCallback = null;
+let _showToastCallback = null;
 
-        console.log("Menu carregado:", MENU_ITEMS.length, "itens");
-        return true;
-    } catch (e) {
-        console.error("Erro ao carregar menu:", e);
-        // Fallback silencioso ou alerta
-        return false;
-    }
+export function initRenderAppRef(renderFn, toastFn) {
+    _renderAppCallback = renderFn;
+    _showToastCallback = toastFn;
 }
 
-export async function createOrder(orderData) {
-    // 1. Salva no Supabase
-    const { data, error } = await supabase
-        .from('orders')
-        .insert([{
-            customer_data: orderData.customer,
-            items: orderData.items,
-            total: orderData.total,
-            status: 'PENDING',
-            created_at: new Date()
-        }])
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Erro DB:", error);
-        throw error;
-    }
-
-    // 2. Inicia escuta em tempo real para este pedido
-    subscribeToOrderUpdates(data.id);
-    
-    return data;
+export function triggerRender(onlyCart = false) {
+    if (_renderAppCallback) _renderAppCallback(onlyCart);
 }
 
-function subscribeToOrderUpdates(orderId) {
-    supabase
-        .channel(`order-${orderId}`)
+export function triggerToastRef(msg, type = 'success') {
+    if (_showToastCallback) _showToastCallback(msg, type);
+}
+
+// --- FUNÇÃO DE TRACKING REALTIME ---
+export function subscribeToOrder(orderId) {
+    if (orderSubscription) {
+        supabase.removeChannel(orderSubscription);
+    }
+
+    const statusMessages = {
+        'PAID': 'Pagamento confirmado! A cozinha vai começar o preparo.',
+        'PREPARING': 'Sua pizza está no forno! O preparo foi iniciado.',
+        'DELIVERY': 'Saiu para entrega! O motoboy está a caminho.',
+        'COMPLETED': 'Pedido entregue! Bom apetite.',
+        'CANCELLED': 'Seu pedido foi cancelado. Entre em contato.'
+    };
+
+    orderSubscription = supabase
+        .channel(`order-tracking-${orderId}`)
         .on(
             'postgres_changes',
             { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
             (payload) => {
-                if (payload.new.status === 'PAID') {
-                    triggerToastRef("Pagamento confirmado! Iniciando preparo.");
-                    if(appState.lastOrder) {
-                        appState.lastOrder.status = 'PAID';
-                        // Força atualização se estiver na tela de tracking
-                        if(appState.currentView === APP_VIEWS.PROFILE) renderAppRef();
+                const newStatus = payload.new.status;
+                const oldStatus = appState.lastOrder?.status;
+
+                if (appState.lastOrder && appState.lastOrder.id === orderId) {
+                    appState.lastOrder.status = newStatus;
+                    localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(appState.lastOrder));
+                    
+                    triggerToastRef(`Status atualizado: ${newStatus}`);
+                    
+                    if (newStatus !== oldStatus && statusMessages[newStatus]) {
+                        Utils.sendSystemNotification(
+                            "Atualização do Pedido 🍕",
+                            statusMessages[newStatus]
+                        );
                     }
+
+                    triggerRender();
                 }
             }
         )
         .subscribe();
 }
 
-// --- LOGIC ---
+// --- INICIALIZAÇÃO ---
+export async function initApp() {
+    // 1. Carregar Produtos
+    const { data: products, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('active', true);
+
+    if (error) {
+        console.error("Erro ao buscar produtos:", error);
+        MENU_ITEMS = []; 
+    } else {
+        MENU_ITEMS = products.map((p, index) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            category: p.category,
+            basePrice: p.base_price,
+            priceModifiers: p.price_modifiers,
+            imageUrl: p.image_url,
+            // Simulação de Oferta (ex: a cada 4 itens, 1 é oferta)
+            onSale: (index % 4 === 0) 
+        }));
+    }
+
+    // 2. Carregar Usuário
+    const savedUser = getUserProfile();
+    if(savedUser) {
+        appState.customerData = savedUser;
+    }
+
+    // 3. Carregar Último Pedido Local
+    const savedOrder = localStorage.getItem(LAST_ORDER_KEY);
+    if (savedOrder) {
+        try {
+            const localOrder = JSON.parse(savedOrder);
+            const { data: freshOrder } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('id', localOrder.id)
+                .single();
+            
+            if (freshOrder) {
+                // Atualiza status local
+                localOrder.status = freshOrder.status;
+                // Atualiza dados do cliente caso tenha mudado (ex: comprovante anexado)
+                if(freshOrder.customer_data) localOrder.customer = freshOrder.customer_data;
+                
+                localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(localOrder));
+                appState.lastOrder = localOrder;
+            }
+            
+            // Só inscreve no realtime se o pedido ainda não estiver concluído
+            if(['PENDING', 'PAID', 'PREPARING', 'DELIVERY'].includes(localOrder.status)) {
+                subscribeToOrder(localOrder.id);
+                Utils.requestNotificationPermission();
+            }
+
+        } catch (e) {
+            console.error("Erro ao recuperar último pedido", e);
+        }
+    }
+
+    triggerRender();
+}
+
+// --- ACTIONS ---
 
 export function navigate(view) {
-  appState.currentView = view;
-  if (view === APP_VIEWS.MENU) appState.selectedCategory = CATEGORIES.PIZZA;
-  renderAppRef();
+    appState.currentView = view;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    triggerRender();
 }
 
 export function setSelectedCategory(category) {
     appState.selectedCategory = category;
-    renderAppRef();
+    triggerRender();
 }
 
 export function setCustomerData(data) {
     appState.customerData = data;
-}
-
-export function confirmOrder(total, dbId = null) {
-    appState.lastOrder = {
-        id: dbId,
-        customer: { ...appState.customerData },
-        items: [...CartStore.items],
-        total: total,
-        date: new Date(),
-        status: 'PENDING' 
-    };
-    CartStore.clearCart();
-}
-
-export function saveUserProfile(data) {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data));
-    triggerToastRef("Perfil salvo com sucesso!");
+    if (data) {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data));
+    } else {
+        localStorage.removeItem(USER_STORAGE_KEY);
+        appState.lastOrder = null;
+        localStorage.removeItem(LAST_ORDER_KEY);
+        if (orderSubscription) supabase.removeChannel(orderSubscription);
+    }
 }
 
 export function getUserProfile() {
-    const stored = localStorage.getItem(USER_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
+    try {
+        return JSON.parse(localStorage.getItem(USER_STORAGE_KEY));
+    } catch(e) { return null; }
 }
 
+export function saveUserProfile(data) {
+    setCustomerData(data);
+    
+    // Normaliza CPF (apenas números) para chave primária/relacionamento
+    const cleanCpf = data.cpf.replace(/\D/g, '');
+
+    (async () => {
+        // Tenta buscar pelo CPF primeiro (chave mais estável) ou Email
+        const { data: existing } = await supabase
+            .from('profiles')
+            .select('id')
+            .or(`cpf.eq.${data.cpf},cpf.eq.${cleanCpf},email.eq.${data.email}`)
+            .maybeSingle();
+
+        if (existing) {
+            await supabase.from('profiles').update({
+                full_name: data.fullName,
+                phone: data.phone,
+                cpf: cleanCpf, // Salva limpo
+                email: data.email, // Atualiza email caso tenha mudado
+                address: data.address,
+                updated_at: new Date()
+            }).eq('id', existing.id);
+        } else {
+            await supabase.from('profiles').insert([{
+                full_name: data.fullName,
+                email: data.email,
+                phone: data.phone,
+                cpf: cleanCpf, // Salva limpo
+                address: data.address
+            }]);
+        }
+    })();
+}
+
+export async function loginUser(email, passwordInput) {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) {
+            return { success: false, message: "Email não encontrado. Faça seu cadastro." };
+        }
+
+        const cleanCpf = data.cpf ? data.cpf.replace(/\D/g, '') : '';
+        const passwordCorrect = cleanCpf.substring(0, 4);
+
+        if (passwordInput === passwordCorrect) {
+            const userObj = {
+                fullName: data.full_name,
+                email: data.email,
+                phone: data.phone,
+                cpf: data.cpf, // Mantém o que veio do banco
+                address: data.address || {}
+            };
+            setCustomerData(userObj);
+            return { success: true };
+        } else {
+            return { success: false, message: "Senha incorreta (Use os 4 primeiros números do CPF)." };
+        }
+
+    } catch (e) {
+        console.error(e);
+        return { success: false, message: "Erro de conexão." };
+    }
+}
+
+// NOVA FUNÇÃO: Busca histórico de pedidos via CPF
+export async function fetchUserOrders(cpf) {
+    if (!cpf) return [];
+    
+    const cleanCpf = cpf.replace(/\D/g, '');
+    
+    // Busca na tabela orders onde customer_cpf match
+    const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_cpf', cleanCpf)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.warn("Erro ao buscar histórico (verifique se coluna customer_cpf existe):", error);
+        return [];
+    }
+    return data;
+}
+
+// NOVA FUNÇÃO: Enviar Comprovante
+export async function submitPaymentProof(orderId, proofBase64) {
+    try {
+        // 1. Busca o pedido atual para pegar o customer_data existente
+        const { data: order, error: fetchError } = await supabase
+            .from('orders')
+            .select('customer_data')
+            .eq('id', orderId)
+            .single();
+
+        if(fetchError || !order) throw new Error("Pedido não encontrado");
+
+        // 2. Atualiza customer_data com a prova
+        const updatedCustomerData = {
+            ...order.customer_data,
+            paymentProof: proofBase64,
+            paymentProofDate: new Date().toISOString()
+        };
+
+        const { error: updateError } = await supabase
+            .from('orders')
+            .update({ customer_data: updatedCustomerData }) // Salva no JSON
+            .eq('id', orderId);
+
+        if(updateError) throw updateError;
+        
+        // Atualiza estado local
+        if(appState.lastOrder && appState.lastOrder.id === orderId) {
+            appState.lastOrder.customer = updatedCustomerData;
+            localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(appState.lastOrder));
+        }
+
+        return { success: true };
+    } catch(e) {
+        console.error(e);
+        return { success: false, message: e.message };
+    }
+}
+
+
+export function confirmOrder(total, orderId) {
+    appState.lastOrder = {
+        id: orderId || `ORD-${Date.now()}`,
+        total: total,
+        date: new Date(),
+        status: 'PENDING',
+        customer: appState.customerData
+    };
+    
+    localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(appState.lastOrder));
+    Utils.requestNotificationPermission();
+    subscribeToOrder(appState.lastOrder.id);
+    CartStore.items = [];
+    CartStore.saveAndRender();
+}
+
+export async function createOrder(orderData) {
+    // Garante que temos o CPF limpo para relacionamento
+    const cleanCpf = orderData.customer.cpf ? orderData.customer.cpf.replace(/\D/g, '') : null;
+
+    const { data, error } = await supabase
+        .from('orders')
+        .insert([{
+            customer_cpf: cleanCpf, // COLUNA DE RELACIONAMENTO (FK LÓGICA)
+            customer_data: orderData.customer, // JSONB para compatibilidade
+            items: orderData.items,
+            total: orderData.total,
+            status: 'PENDING'
+        }])
+        .select()
+        .single();
+        
+    if(error) throw error;
+    return data;
+}
+
+// --- CART STORE (Carrinho) ---
 export const CartStore = {
   items: [],
   isCartOpen: false,
-  
-  updateUI() { renderAppRef(true); },
 
   init() {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
-    if (stored) {
-      try { this.items = JSON.parse(stored); } 
-      catch (e) { this.items = []; }
-    }
-    this.updateUI(); 
-  },
-
-  saveAndRender() {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(this.items));
+    if (stored) this.items = JSON.parse(stored);
     this.updateUI();
   },
 
@@ -208,15 +402,20 @@ export const CartStore = {
       if (item.cartId === cartId) {
         const newQuantity = Math.max(1, item.quantity + delta);
         const unitPrice = item.totalPrice / item.quantity;
-        return { ...item, quantity: newQuantity, totalPrice: unitPrice * newQuantity };
+        item.quantity = newQuantity;
+        item.totalPrice = newQuantity * unitPrice;
       }
       return item;
     });
     this.saveAndRender();
   },
-  
-  clearCart() {
-    this.items = [];
-    this.saveAndRender();
+
+  saveAndRender() {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(this.items));
+    this.updateUI();
+  },
+
+  updateUI() {
+    triggerRender(true);
   }
 };
