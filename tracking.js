@@ -1,8 +1,10 @@
 
+
 import * as Utils from './utils.js';
 import * as State from './state.js';
 
 let trackingInterval = null;
+let pollingInterval = null; // Nova variável para polling de status
 
 const TRACKING_STAGES = [
     { id: 1, label: "Recebido", icon: "CheckCircle2", timeTrigger: 0 },
@@ -16,6 +18,12 @@ export function renderProfileView() {
     const order = State.appState.lastOrder;
     const customer = State.appState.customerData || (order ? order.customer : null);
     
+    // Garante que a assinatura realtime está ativa ao entrar na tela
+    if (order) {
+        State.subscribeToOrder(order.id);
+        startStatusPolling(order.id); // Inicia verificação extra
+    }
+
     const container = document.createElement('div');
     container.className = "profile-container animate-in";
 
@@ -39,7 +47,12 @@ export function renderProfileView() {
 
     container.innerHTML = `
         <div class="tracking-card">
-            <h3 class="card-title mb-4">Acompanhar Pedido</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="card-title mb-0">Acompanhar Pedido</h3>
+                <button id="btn-force-refresh" class="text-xs bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i> Atualizar Status
+                </button>
+            </div>
             
             <div class="timeline-wrapper">
                 <div class="progress-bar-bg"></div>
@@ -165,85 +178,94 @@ export function renderProfileView() {
             }
         });
     }
+    
+    // Logic for Manual Refresh
+    container.querySelector('#btn-force-refresh').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const icon = btn.querySelector('i');
+        icon.classList.add('fa-spin');
+        
+        await State.initApp(); // Força recarregar status do banco
+        
+        setTimeout(() => icon.classList.remove('fa-spin'), 1000);
+        State.triggerToastRef("Status atualizado");
+    });
 
-    startTrackingLogic(container);
+    startTrackingLogic(container, order.status);
 
     return container;
 }
 
-function startTrackingLogic(container) {
+// Polling de segurança: a cada 15s verifica se mudou algo no banco
+function startStatusPolling(orderId) {
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(async () => {
+        // Apenas verifica silenciosamente
+        const savedOrder = localStorage.getItem(State.LAST_ORDER_KEY);
+        if (savedOrder) {
+            try {
+                const localOrder = JSON.parse(savedOrder);
+                const { data: freshOrder } = await State.supabase
+                    .from('orders')
+                    .select('status')
+                    .eq('id', localOrder.id)
+                    .single();
+                
+                if (freshOrder && freshOrder.status !== localOrder.status) {
+                    // Se mudou e o socket não pegou, força refresh
+                    console.log("Polling detectou mudança de status:", freshOrder.status);
+                    State.initApp();
+                }
+            } catch(e) { console.error("Polling error", e); }
+        }
+    }, 15000);
+}
+
+function startTrackingLogic(container, backendStatus) {
     if (trackingInterval) clearInterval(trackingInterval);
 
-    const startTime = Date.now();
     const statusTitle = container.querySelector('#status-title');
     const statusDesc = container.querySelector('#status-desc');
     const statusIcon = container.querySelector('.status-icon-large');
     const progressBar = container.querySelector('#progress-bar-fill');
     const motoMarker = container.querySelector('#moto-icon');
     const timerDisplay = container.querySelector('#delivery-timer');
-    const accidentBox = container.querySelector('#accident-alert');
-    const statusDisplay = container.querySelector('#status-display');
+    
+    // Mapeamento REAL do status do banco para a barra de progresso
+    let progressPercent = 10;
+    
+    if (backendStatus === 'PENDING') {
+        progressPercent = 10;
+        statusTitle.innerText = "Aguardando Pagamento";
+        statusDesc.innerText = "Realize o PIX para iniciarmos.";
+        statusIcon.innerHTML = Utils.getIcon('Clock', 'icon-48 text-yellow');
+    } else if (backendStatus === 'PAID') {
+        progressPercent = 25;
+        statusTitle.innerText = "Pagamento Confirmado";
+        statusDesc.innerText = "Pedido enviado para a cozinha.";
+        statusIcon.innerHTML = Utils.getIcon('CheckCircle2', 'icon-48 text-green');
+    } else if (backendStatus === 'PREPARING') {
+        progressPercent = 50;
+        statusTitle.innerText = "Preparando seu Pedido";
+        statusDesc.innerText = "A pizza está no forno!";
+        statusIcon.innerHTML = Utils.getIcon('Pizza', 'icon-48 text-orange');
+    } else if (backendStatus === 'DELIVERY') {
+        progressPercent = 80;
+        statusTitle.innerText = "Saiu para Entrega";
+        statusDesc.innerText = "O motoboy está a caminho.";
+        statusIcon.innerHTML = Utils.getIcon('Motorcycle', 'icon-48 text-primary');
+        timerDisplay.classList.remove('hidden');
+    } else if (backendStatus === 'COMPLETED') {
+        progressPercent = 100;
+        statusTitle.innerText = "Pedido Entregue";
+        statusDesc.innerText = "Bom apetite!";
+        statusIcon.innerHTML = Utils.getIcon('Home', 'icon-48 text-green');
+        timerDisplay.classList.add('hidden');
+    }
 
-    const FIVE_MINUTES = 5 * 60 * 1000; 
-    const TWENTY_MINUTES = 20 * 60 * 1000; 
-    const FORTY_MINUTES = 40 * 60 * 1000;
-
-    const FACTOR = 1; 
-
-    trackingInterval = setInterval(() => {
-        const elapsed = (Date.now() - startTime) * FACTOR;
-        
-        let currentStageIdx = 0;
-        let progressPercent = 0;
-
-        if (elapsed < (2 * 60 * 1000)) {
-            currentStageIdx = 0;
-            progressPercent = 10;
-        } else if (elapsed < (4 * 60 * 1000)) {
-            currentStageIdx = 1;
-            statusTitle.innerText = "Preparando seu Pedido";
-            statusDesc.innerText = "A cozinha já está trabalhando.";
-            statusIcon.innerHTML = Utils.getIcon('Pizza', 'icon-48 text-yellow');
-            progressPercent = 30;
-        } else if (elapsed < FIVE_MINUTES) {
-            currentStageIdx = 2;
-            statusTitle.innerText = "Saiu para Entrega";
-            statusDesc.innerText = "O motoboy retirou seu pedido.";
-            statusIcon.innerHTML = Utils.getIcon('Home', 'icon-48 text-primary');
-            progressPercent = 50;
-        } else {
-            currentStageIdx = 3;
-            timerDisplay.classList.remove('hidden');
-            
-            const timeInDelivery = elapsed - FIVE_MINUTES;
-            const totalDeliveryTime = FORTY_MINUTES;
-            const remainingTime = Math.max(0, totalDeliveryTime - timeInDelivery);
-            
-            const deliveryProgress = Math.min(1, timeInDelivery / (TWENTY_MINUTES)); 
-            progressPercent = 50 + (deliveryProgress * 40); 
-
-            const minsLeft = Math.ceil(remainingTime / 60000);
-            timerDisplay.querySelector('span').innerText = `${minsLeft} min`;
-
-            statusTitle.innerText = "Pedido a Caminho";
-            statusDesc.innerText = "O entregador está indo até você.";
-            statusIcon.innerHTML = Utils.getIcon('Motorcycle', 'icon-48 text-primary');
-
-            if (timeInDelivery >= TWENTY_MINUTES) {
-                clearInterval(trackingInterval);
-                progressPercent = 90;
-                
-                statusDisplay.classList.add('hidden');
-                accidentBox.classList.remove('hidden');
-                accidentBox.classList.add('animate-shake'); 
-                
-                progressBar.style.backgroundColor = 'var(--color-error)';
-                motoMarker.innerHTML = Utils.getIcon('TriangleAlert', 'text-red icon-24');
-            }
-        }
-
+    // Anima a barra suavemente até a porcentagem do status real
+    setTimeout(() => {
         progressBar.style.width = `${progressPercent}%`;
         motoMarker.style.left = `${progressPercent}%`;
-
-    }, 1000);
+    }, 100);
 }

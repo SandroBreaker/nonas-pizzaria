@@ -16,69 +16,89 @@ export function renderLogin() {
 
     const renderContent = () => {
         container.innerHTML = `
-            <div class="form-card" style="max-width: 500px; margin: 0 auto;">
-                <h2 class="text-2xl font-serif font-bold text-center mb-6">Acesse sua Conta</h2>
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden max-w-md mx-auto border border-gray-100">
+                <div class="bg-gradient-to-r from-red-600 to-red-800 p-6 text-center text-white">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                        <i class="fa-solid fa-user-lock text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-serif font-bold">Acesse sua Conta</h2>
+                    <p class="text-red-100 text-sm">Gerencie seus pedidos e endereço</p>
+                </div>
                 
-                <div class="login-toggle-container">
-                    <button class="toggle-btn ${activeTab === 'CLIENT' ? 'active' : ''}" id="tab-client">
-                        Cliente
-                    </button>
-                    <button class="toggle-btn ${activeTab === 'ADMIN' ? 'active' : ''}" id="tab-admin">
-                        Admin
-                    </button>
-                </div>
-
-                <div id="client-view" class="${activeTab === 'CLIENT' ? '' : 'hidden'}">
-                    
-                    <div id="login-form-box" class="${isRegistering ? 'hidden' : ''}">
-                        <p class="text-center text-stone-500 mb-6 text-sm">Entre para ver seus pedidos.</p>
-                        
-                        <form id="client-login-form" class="flex flex-col gap-4">
-                            <div class="input-group text-left">
-                                <label>Email</label>
-                                <input type="email" id="login-email" class="input-field" placeholder="seu@email.com" required>
-                            </div>
-                            <div class="input-group text-left">
-                                <label>Senha (4 primeiros dígitos do CPF)</label>
-                                <input type="password" id="login-pass" class="input-field" placeholder="1234" maxlength="4" required>
-                            </div>
-                            <button type="submit" class="btn-primary btn-full mt-2">
-                                Entrar
-                            </button>
-                        </form>
-                        
-                        <div class="text-center mt-6 pt-4 border-t border-gray-100">
-                            <p class="text-sm text-stone-500 mb-2">Ainda não tem conta?</p>
-                            <button id="btn-go-register" class="btn-ghost text-primary font-bold">Criar conta agora</button>
-                        </div>
+                <div class="p-8">
+                    <div class="login-toggle-container mb-8">
+                        <button class="toggle-btn ${activeTab === 'CLIENT' ? 'active' : ''}" id="tab-client">
+                            <i class="fa-regular fa-user mr-2"></i> Cliente
+                        </button>
+                        <button class="toggle-btn ${activeTab === 'ADMIN' ? 'active' : ''}" id="tab-admin">
+                            <i class="fa-solid fa-shield-halved mr-2"></i> Admin
+                        </button>
                     </div>
 
-                    <div id="register-form-box" class="${isRegistering ? '' : 'hidden'} animate-in">
-                        <div class="flex items-center gap-2 mb-4">
-                            <button id="btn-back-login" class="btn-icon bg-gray-100"><i class="fa-solid fa-arrow-left"></i></button>
-                            <span class="font-bold">Voltar para Login</span>
+                    <div id="client-view" class="${activeTab === 'CLIENT' ? '' : 'hidden'}">
+                        
+                        <div id="login-form-box" class="${isRegistering ? 'hidden' : ''} space-y-5">
+                            <form id="client-login-form" class="flex flex-col gap-4">
+                                <div class="input-group">
+                                    <label class="font-bold text-gray-700 text-sm">Email</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-envelope absolute left-3 top-3 text-gray-400"></i>
+                                        <input type="email" id="login-email" class="input-field pl-10" placeholder="seu@email.com" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label class="font-bold text-gray-700 text-sm">Senha <span class="text-xs font-normal text-gray-400">(4 primeiros dígitos do CPF)</span></label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-key absolute left-3 top-3 text-gray-400"></i>
+                                        <input type="password" id="login-pass" class="input-field pl-10" placeholder="••••" maxlength="4" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn-primary btn-full py-3 text-base shadow-lg hover:shadow-xl transform transition-all">
+                                    Entrar
+                                </button>
+                            </form>
+                            
+                            <div class="text-center mt-6 pt-6 border-t border-gray-100">
+                                <p class="text-sm text-stone-500 mb-2">Ainda não tem cadastro?</p>
+                                <button id="btn-go-register" class="text-primary font-bold hover:underline">Criar conta agora</button>
+                            </div>
                         </div>
-                        <div id="client-form-wrapper"></div>
+
+                        <div id="register-form-box" class="${isRegistering ? '' : 'hidden'} animate-in">
+                            <div class="flex items-center gap-2 mb-6">
+                                <button id="btn-back-login" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                                    <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                                </button>
+                                <span class="font-bold text-gray-700">Voltar para Login</span>
+                            </div>
+                            <div id="client-form-wrapper"></div>
+                        </div>
+
                     </div>
 
-                </div>
+                    <div id="admin-view" class="${activeTab === 'ADMIN' ? '' : 'hidden'} animate-in">
+                        <form id="admin-form" class="flex flex-col gap-5">
+                            <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-lg flex gap-3 items-start mb-2">
+                                <i class="fa-solid fa-triangle-exclamation text-yellow-600 mt-1"></i>
+                                <p class="text-xs text-yellow-800 leading-relaxed">Área restrita para colaboradores. O acesso é monitorado.</p>
+                            </div>
 
-                <div id="admin-view" class="${activeTab === 'ADMIN' ? '' : 'hidden'} animate-in">
-                    <div class="admin-login-box">
-                        <div class="admin-icon-box">
-                            ${Utils.getIcon('User', 'icon-32')}
-                        </div>
-                        <form id="admin-form" class="flex flex-col gap-4">
-                            <div class="input-group text-left">
-                                <label>Usuário</label>
-                                <input type="text" id="admin-user" class="input-field" placeholder="admin">
+                            <div class="input-group">
+                                <label class="font-bold text-gray-700 text-sm">Usuário</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-user-shield absolute left-3 top-3 text-gray-400"></i>
+                                    <input type="text" id="admin-user" class="input-field pl-10" placeholder="admin">
+                                </div>
                             </div>
-                            <div class="input-group text-left">
-                                <label>Senha</label>
-                                <input type="password" id="admin-pass" class="input-field" placeholder="••••••">
+                            <div class="input-group">
+                                <label class="font-bold text-gray-700 text-sm">Senha</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-lock absolute left-3 top-3 text-gray-400"></i>
+                                    <input type="password" id="admin-pass" class="input-field pl-10" placeholder="••••••">
+                                </div>
                             </div>
-                            <button type="submit" class="btn-primary btn-full mt-4">
-                                Entrar no Painel
+                            <button type="submit" class="btn-primary btn-full bg-slate-800 hover:bg-slate-900 py-3 mt-2">
+                                Acessar Painel
                             </button>
                         </form>
                     </div>
@@ -102,7 +122,9 @@ export function renderLogin() {
                     const pass = document.getElementById('login-pass').value;
                     
                     const btn = e.target.querySelector('button');
-                    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Entrando...`;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...`;
+                    btn.disabled = true;
                     
                     const res = await State.loginUser(email, pass);
                     
@@ -110,7 +132,8 @@ export function renderLogin() {
                         Components.showToast(`Bem-vindo, ${State.appState.customerData.fullName.split(' ')[0]}!`);
                         State.navigate(State.APP_VIEWS.PROFILE);
                     } else {
-                        btn.innerHTML = 'Entrar';
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
                         Components.showToast(res.message, 'error');
                         btn.classList.add('animate-shake');
                         setTimeout(() => btn.classList.remove('animate-shake'), 500);
@@ -131,6 +154,7 @@ export function renderLogin() {
                     if(header) header.remove();
                     innerCard.style.boxShadow = 'none';
                     innerCard.style.padding = '0';
+                    innerCard.style.border = 'none';
                     wrapper.appendChild(innerCard);
                 } else {
                     wrapper.appendChild(formElement);
@@ -150,7 +174,7 @@ export function renderLogin() {
                         window.location.href = 'admin.html';
                     }, 500);
                 } else {
-                    Components.showToast("Usuário ou senha incorretos", 'error');
+                    Components.showToast("Credenciais inválidas", 'error');
                     const btn = e.target.querySelector('button');
                     btn.classList.add('animate-shake');
                     setTimeout(() => btn.classList.remove('animate-shake'), 500);
@@ -785,13 +809,13 @@ export function renderContact() {
             <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
                 ${Utils.getIcon('MapPin', 'text-primary')} Onde Estamos
             </h3>
-            <p class="text-stone-600 mb-1"><strong>Rua das Pizzas, 123</strong></p>
-            <p class="text-stone-500 text-sm mb-4">Bairro Italiano, São Paulo - SP</p>
+            <p class="text-stone-600 mb-1"><strong>Rua Augusta, 1500</strong></p>
+            <p class="text-stone-500 text-sm mb-4">Consolação, São Paulo - SP</p>
             
             <div id="map" class="w-full h-48 bg-stone-200 rounded-lg text-stone-400 text-sm">
                 <!-- Mapa será renderizado aqui -->
             </div>
-            <p class="text-xs text-stone-400 text-center mt-2">Localização aproximada</p>
+            <p class="text-xs text-stone-400 text-center mt-2">Localização exata da unidade</p>
         </div>
     `;
 
@@ -799,14 +823,14 @@ export function renderContact() {
     setTimeout(() => {
         if (!document.getElementById('map')) return;
 
-        const initMap = (lat, lng) => {
+        const initMap = (lat, lng, userLat, userLng) => {
             // Se já existe mapa, remove para evitar erro de inicialização dupla
             if (window.leafletMap) {
                 window.leafletMap.remove();
             }
 
             // Cria o mapa
-            const map = L.map('map').setView([lat, lng], 13);
+            const map = L.map('map').setView([lat, lng], 14);
             window.leafletMap = map;
 
             // Adiciona camada do OpenStreetMap
@@ -814,43 +838,195 @@ export function renderContact() {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            // Adiciona marcador da pizzaria
+            // Adiciona marcador da pizzaria (FIXO EM TERRA FIRME - Ex: Rua Augusta/Paulista)
             L.marker([lat, lng]).addTo(map)
-                .bindPopup('<b>Nona\'s Pizzeria</b><br>Estamos aqui!')
+                .bindPopup('<b>Nona\'s Pizzeria</b><br>Rua Augusta, 1500')
                 .openPopup();
                 
-            // Círculo de área de entrega
-            L.circle([lat, lng], {
-                color: '#b42323',
-                fillColor: '#b42323',
-                fillOpacity: 0.1,
-                radius: 3000 // 3km
-            }).addTo(map);
+            // Se tiver localização do usuário, tenta ajustar o zoom para mostrar ambos (simulando rota)
+            if (userLat && userLng) {
+                L.marker([userLat, userLng], {
+                    icon: L.divIcon({
+                        className: 'user-marker',
+                        html: '<div style="background:blue;width:12px;height:12px;border-radius:50%;border:2px solid white;"></div>'
+                    })
+                }).addTo(map).bindPopup('Você está aqui');
+                
+                // Traça uma linha simples
+                L.polyline([[userLat, userLng], [lat, lng]], {color: 'blue', dashArray: '5, 10'}).addTo(map);
+                
+                const group = new L.featureGroup([
+                    L.marker([lat, lng]),
+                    L.marker([userLat, userLng])
+                ]);
+                map.fitBounds(group.getBounds().pad(0.2));
+            }
         };
 
-        // Tenta pegar localização do usuário para calcular "distância"
+        // Coordenada FIXA da Pizzaria (Ex: Av Paulista/Augusta - Garantia de não ser água)
+        const PIZZERIA_LAT = -23.5555;
+        const PIZZERIA_LNG = -46.6610;
+
+        // Tenta pegar localização do usuário APENAS para mostrar a distância relativa
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition((position) => {
                 const userLat = position.coords.latitude;
                 const userLng = position.coords.longitude;
-                
-                // Calcula um ponto a ~5-10km de distância aleatória
-                // 1 grau ~ 111km. 0.05 graus ~ 5.5km
-                const latOffset = (Math.random() - 0.5) * 0.1; 
-                const lngOffset = (Math.random() - 0.5) * 0.1;
-                
-                initMap(userLat + latOffset, userLng + lngOffset);
-
+                initMap(PIZZERIA_LAT, PIZZERIA_LNG, userLat, userLng);
             }, () => {
-                // Fallback: Centro de SP
-                initMap(-23.5505, -46.6333);
+                // Fallback sem user location
+                initMap(PIZZERIA_LAT, PIZZERIA_LNG);
             });
         } else {
-            // Fallback: Centro de SP
-            initMap(-23.5505, -46.6333);
+            // Fallback sem suporte a geo
+            initMap(PIZZERIA_LAT, PIZZERIA_LNG);
         }
 
     }, 100);
 
     return div;
+}
+export function renderPixPayment() {
+    const container = document.createElement('div');
+    container.className = "pix-container animate-in";
+    const total = State.CartStore.cartTotal;
+    const customer = State.appState.customerData;
+    
+    const renderState = (state, data = null) => {
+        if (state === 'LOADING') {
+             container.innerHTML = `
+                <div class="pix-card">
+                    ${Utils.getIcon('LoaderCircle', 'icon-64 text-primary fa-spin')}
+                    <h2 class="text-xl font-bold mt-4">Gerando Pedido...</h2>
+                </div>
+             `;
+        } else if (state === 'ERROR') {
+             container.innerHTML = `
+                <div class="pix-card error">
+                    ${Utils.getIcon('XCircle', 'icon-64 text-red')}
+                    <h2 class="text-xl font-bold mt-4">Erro no Pedido</h2>
+                    <p class="text-stone-500 mb-4">${data}</p>
+                    <button id="retry-home" class="btn-secondary mx-auto">Voltar ao Início</button>
+                </div>
+             `;
+             container.querySelector('#retry-home')?.addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
+        } else {
+             container.innerHTML = `
+                <div class="pix-card">
+                    ${Utils.getIcon('CheckCircle2', 'icon-64 text-green')}
+                    <h2 class="text-2xl font-serif font-bold mt-2">Pedido Recebido!</h2>
+                    <p class="text-stone-500 mb-6">Pague para confirmar.</p>
+                    
+                    <div class="pix-value">${Utils.formatCurrency(total)}</div>
+                    
+                    ${data.qr_code_base64 ? `<div class="qr-code-box"><img src="data:image/png;base64,${data.qr_code_base64}" width="200" /></div>` : ''}
+                    
+                    <div class="text-left">
+                        <label class="text-sm font-bold">Pix Copia e Cola</label>
+                        <div class="copy-paste-box">
+                            <input readonly value="${data.pix_qr_code}" class="copy-input" />
+                            <button id="copy-btn" class="btn-primary">
+                                ${Utils.getIcon('Copy', 'icon-16 text-white')} Copiar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-6 border-t border-gray-100 flex flex-col gap-3">
+                        <button id="track-order-btn" class="btn-primary btn-full hidden">
+                            ${Utils.getIcon('Motorcycle', 'icon-20 text-white')} Acompanhar Pedido
+                        </button>
+                        <button id="back-home" class="btn-ghost">Voltar ao Início</button>
+                    </div>
+                </div>
+             `;
+             
+             const copyBtn = container.querySelector('#copy-btn');
+             const trackBtn = container.querySelector('#track-order-btn');
+
+             copyBtn.addEventListener('click', (e) => {
+                 navigator.clipboard.writeText(data.pix_qr_code);
+                 e.currentTarget.innerHTML = `${Utils.getIcon('Check', 'icon-16 text-white')} Copiado!`;
+                 e.currentTarget.classList.replace('btn-primary', 'bg-green-500');
+                 trackBtn.classList.remove('hidden');
+                 trackBtn.classList.add('animate-in');
+             });
+
+             trackBtn.addEventListener('click', () => {
+                 State.navigate(State.APP_VIEWS.PROFILE);
+             });
+
+             container.querySelector('#back-home').addEventListener('click', () => State.navigate(State.APP_VIEWS.MENU));
+        }
+    };
+
+    (async () => {
+        renderState('LOADING');
+        const currentTotal = State.appState.lastOrder ? State.appState.lastOrder.total : total;
+
+        if (currentTotal <= 0 || !customer) {
+            renderState('ERROR', "Dados inválidos.");
+            return;
+        }
+
+        try {
+            // 1. Cria Pedido no Banco de Dados (Supabase)
+            let orderId = State.appState.lastOrder ? State.appState.lastOrder.id : null;
+            
+            if(!orderId) {
+                const dbOrder = await State.createOrder({
+                    customer: customer,
+                    items: State.CartStore.items,
+                    total: currentTotal
+                });
+                
+                // Atualiza estado local
+                State.confirmOrder(currentTotal, dbOrder.id);
+                orderId = dbOrder.id;
+            }
+
+            // 2. Chama API de Pagamento
+            const payload = {
+                "amount": Math.round(currentTotal * 100),
+                "offer_hash": State.OFFER_HASH_DEFAULT,
+                "payment_method": "pix",
+                "installments": 1, 
+                "customer": {
+                    name: customer.fullName,
+                    document: customer.cpf.replace(/\D/g, ''),
+                    phone_number: customer.phone.replace(/\D/g, ''),
+                    email: customer.email,
+                    zip_code: customer.address.zipCode.replace(/\D/g, ''),
+                    number: customer.address.number,
+                    street_name: customer.address.street,
+                    neighborhood: customer.address.neighborhood,
+                    city: customer.address.city || "Sao Paulo", 
+                    state: customer.address.state || "SP"
+                },
+                "cart": [{ 
+                    "product_hash": State.OFFER_HASH_DEFAULT, 
+                    "title": `Nona Pizza #${orderId.slice(0,6)}`, 
+                    "price": Math.round(currentTotal * 100), 
+                    "quantity": 1, 
+                    "tangible": true,
+                    "operation_type": 1 
+                }],
+                "external_reference": orderId,
+                "expire_in_days": 1
+            };
+
+            const res = await Utils.executeInvictusApi(payload);
+            
+            if(res.success) {
+                renderState('SUCCESS', res.data.pix || res.data);
+            } else {
+                renderState('ERROR', res.error);
+            }
+            
+        } catch(e) {
+            console.error(e);
+            renderState('ERROR', "Falha ao registrar pedido. Tente novamente.");
+        }
+    })();
+
+    return container;
 }

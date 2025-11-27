@@ -1,3 +1,4 @@
+
 /* admin.css - Redesigned & Fixed */
 
 :root {
@@ -181,4 +182,41 @@ body { background-color: #f8fafc; color: #1e293b; font-family: 'Inter', sans-ser
     
     .mobile-only { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 101; background: #0f172a; color: white; padding: 0.5rem; border-radius: 6px; border: none; }
     .admin-content { padding: 1rem; padding-top: 4rem; }
+    
+    /* Mobile Table / Cards Adjustment */
+    .product-table, .admin-table { min-width: auto; display: block; }
+    .product-table thead, .admin-table thead { display: none; }
+    .product-table tbody, .admin-table tbody { display: block; }
+    .product-table tr, .admin-table tr {
+        display: block;
+        background: white;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .product-table td, .admin-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border: none;
+        text-align: right;
+    }
+    /* Pseudo-labels for mobile cards context */
+    .product-table td:nth-child(1) { justify-content: flex-start; margin-bottom: 0.5rem; } /* Img */
+    .product-table td:nth-child(2):before { content: "Nome:"; font-weight: bold; margin-right: 1rem; }
+    .product-table td:nth-child(3):before { content: "Categoria:"; font-weight: bold; margin-right: 1rem; }
+    .product-table td:nth-child(4):before { content: "Preço:"; font-weight: bold; margin-right: 1rem; }
+    .product-table td:nth-child(5) { justify-content: flex-end; margin-top: 0.5rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; }
+    
+    /* Admin Customer Table Mobile */
+    .admin-table td:nth-child(1):before { content: "Cliente:"; font-weight: bold; margin-right: 1rem; }
+    .admin-table td:nth-child(2):before { content: "Contato:"; font-weight: bold; margin-right: 1rem; }
+    .admin-table td:nth-child(3):before { content: "CPF:"; font-weight: bold; margin-right: 1rem; }
+    .admin-table td:nth-child(4) { justify-content: flex-end; }
+    
+    /* Fix Forms on Mobile */
+    .form-row { flex-direction: column; gap: 1rem; }
 }
